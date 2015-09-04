@@ -1,0 +1,197 @@
+package sec
+
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"net/http"
+	"testing"
+)
+
+type ResponseWriterTest struct {
+	header http.Header
+	data   []byte
+	status int
+}
+
+func (r *ResponseWriterTest) Header() map[string][]string {
+	return r.header
+}
+
+func (r *ResponseWriterTest) Write(data []byte) (int, error) {
+	r.data = data
+	r.WriteHeader(200)
+	return len(data), nil
+}
+
+func (r *ResponseWriterTest) WriteHeader(status int) {
+	if r.status == 0 {
+		r.status = status
+	}
+}
+
+func (r *ResponseWriterTest) Data() []byte {
+	return r.data
+}
+
+func TestAesCrypto(t *testing.T) {
+	bl, _ := aes.NewCipher([]byte("1234567890123456"))
+	aead, _ := cipher.NewGCM(bl)
+	gcmSize := aead.NonceSize() + aead.Overhead()
+
+	keymsg := [][]byte{
+		[]byte("a secret key used to encrypt"),
+		[]byte("a secret key used to encrypt"),
+		[]byte{},
+		[]byte{},
+		[]byte("01234567"),
+		[]byte("01234567"),
+		[]byte("0123456789012345"),
+		[]byte("012345678901234567890123"),
+		[]byte("01234567890123456789012345678901"),
+		[]byte("0123456789012345678901234567890123456789"),
+	}
+	valmsg := [][]byte{
+		[]byte("this is a msg to be encrypted"),
+		[]byte("this is a message to be encrypted that is longer than a single block"),
+		[]byte{},
+		[]byte("0123456789"),
+		[]byte{},
+		[]byte("01234567"),
+		[]byte("0123456789012345"),
+		[]byte("012345678901234567890123"),
+		[]byte("01234567890123456789012345678901"),
+		[]byte("0123456789012345678901234567890123456789"),
+	}
+
+	for i, key := range keymsg {
+		msg := valmsg[i]
+		enc, err := AesCtrEncrypt(key, msg)
+
+		if err != nil {
+			t.Log("Key:", key)
+			t.Log("Msg:", msg)
+			t.Log("Err:", err.Error())
+			t.Fatal("Error occured when encrypting (CTR)")
+		} else if len(msg) > 0 && len(enc) != aes.BlockSize+len(msg) {
+			t.Log("Key:", key)
+			t.Log("Msg:", msg)
+			t.Log("Expect Len:", aes.BlockSize+len(msg))
+			t.Log("Result Len:", len(enc))
+			t.Fatal("Encryption size mismatch")
+		} else if len(msg) > 0 && bytes.Equal(enc[aes.BlockSize:], msg) {
+			t.Log("Key:", key)
+			t.Log("Msg:", msg)
+			t.Log("Enc:", enc)
+			t.Fatal("Encryption failed, identifical input/output")
+		} else {
+			encg, err := AesGcmEncrypt(key, msg)
+			if err != nil {
+				t.Log("Key:", string(key))
+				t.Log("Msg:", string(msg))
+				t.Log("Err:", err.Error())
+				t.Fatal("Error occured when encrypting (GCM)")
+			} else if len(msg) > 0 && len(encg) != gcmSize+len(msg) {
+				t.Log("Key:", string(key))
+				t.Log("Msg:", string(msg))
+				t.Log("Expect Len:", gcmSize+len(msg))
+				t.Log("Result Len:", len(encg))
+				t.Fatal("Encryption (GCM) size mismatch")
+			} else if len(msg) > 0 && bytes.Equal(encg[gcmSize:], msg) {
+				t.Log("Key:", key)
+				t.Log("Msg:", msg)
+				t.Log("Enc:", encg)
+				t.Fatal("Encryption (GCM) failed, identifical input/output")
+			} else if len(msg) > 0 && bytes.Equal(encg[gcmSize:], enc[aes.BlockSize:]) {
+				t.Log("Key:", key)
+				t.Log("Msg:", msg)
+				t.Log("Enc(CTR):", enc)
+				t.Log("Enc(GCM):", encg)
+				t.Fatal("Encryption failed, identifical CTR & GCM output")
+			} else {
+				dmsg, err := AesCtrDecrypt(key, enc)
+
+				if err != nil {
+					t.Log("Key:", key)
+					t.Log("Msg:", msg)
+					t.Log("Err:", err.Error())
+					t.Fatal("Error occured when decrypting")
+				} else if !bytes.Equal(msg, dmsg) {
+					t.Log("Key:", key)
+					t.Log("Msg:", msg)
+					t.Log("Enc:", enc)
+					t.Log("Dec:", dmsg)
+					t.Fatal("Decryption failed")
+				}
+
+				dmsg, err = AesGcmDecrypt(key, encg)
+
+				if err != nil {
+					t.Log("Key:", key)
+					t.Log("Msg:", msg)
+					t.Log("Err:", err.Error())
+					t.Fatal("Error occured when decrypting")
+				} else if !bytes.Equal(msg, dmsg) {
+					t.Log("Key:", key)
+					t.Log("Msg:", msg)
+					t.Log("Enc:", encg)
+					t.Log("Dec:", dmsg)
+					t.Fatal("Decryption failed")
+				}
+			}
+		}
+
+		encb64, err := AesCtrEncryptBase64(key, msg)
+
+		if err != nil {
+			t.Log("Key:", key)
+			t.Log("Msg:", msg)
+			t.Log("Err:", err.Error())
+			t.Fatal("Error occured when encrypting (base64); err: ", err.Error())
+		} else if bytes.Equal([]byte(encb64), msg) {
+			t.Log("Key:", key)
+			t.Log("Msg:", msg)
+			t.Log("Enc:", encb64)
+			t.Fatal("Encryption (base64) failed, identical input/output")
+		} else {
+			dmsg, err := AesCtrDecryptBase64(key, encb64)
+
+			if err != nil {
+				t.Log("Key:", key)
+				t.Log("Msg:", msg)
+				t.Log("Err:", err.Error())
+				t.Fatal("Error occured when decrypting (base64)")
+			} else if !bytes.Equal(msg, dmsg) {
+				t.Log("Key:", key)
+				t.Log("Msg:", msg)
+				t.Log("Enc:", encb64)
+				t.Log("Dec:", dmsg)
+				t.Fatal("Decryption (base64) failed")
+			}
+		}
+	}
+}
+
+func TestGenRandBytes(t *testing.T) {
+	byteslen := 50
+	empslice := make([]byte, byteslen)
+	rand1 := GenRandomBytes(byteslen)
+	rand2 := GenRandomBytes(byteslen)
+
+	if rand1 == nil || rand2 == nil {
+		t.Error("Unable to generate random bytes")
+	} else if len(rand1) != byteslen || len(rand2) != byteslen {
+		t.Error("Generated bytes' length is not ", byteslen)
+	} else if bytes.Equal(rand1, empslice) || bytes.Equal(rand2, empslice) {
+		t.Error("Generated bytes' were empty slices")
+	} else if bytes.Equal(rand1, rand2) {
+		t.Error("Bytes generated were not random")
+	}
+
+	rand1 = GenRandomBytes(0)
+	rand2 = GenRandomBytes(0)
+
+	if len(rand1) > 0 || len(rand2) > 0 {
+		t.Error("Generated bytes' length is not 0")
+	}
+}
