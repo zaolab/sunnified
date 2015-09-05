@@ -461,7 +461,7 @@ func (this *SunnyEndPoint) SetHandler(handler interface{}, method ...string) err
 			case "PATCH":
 				this.patch = h
 			case "DELETE":
-				this.patch = h
+				this.delete = h
 			case "HEAD":
 				this.head = h
 			}
