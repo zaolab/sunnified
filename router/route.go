@@ -259,13 +259,21 @@ func (this *SunnyRoute) Handle(p string, h interface{}, method ...string) (ep En
 	p = strings.TrimSpace(p)
 
 	if p == "" {
-		ep = &SunnyEndPoint{}
+		if this.hardend != nil {
+			ep = this.hardend
+		} else {
+			ep = &SunnyEndPoint{}
+			this.hardend = ep
+		}
 		ep.SetHandler(h, method...)
-		this.hardend = ep
 	} else if p == "/" {
-		ep = &SunnyEndPoint{}
+		if this.softend != nil {
+			ep = this.softend
+		} else {
+			ep = &SunnyEndPoint{}
+			this.softend = ep
+		}
 		ep.SetHandler(h, method...)
-		this.softend = ep
 	} else {
 		varnames, rts := this.BuildRoute(p)
 
