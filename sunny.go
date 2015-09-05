@@ -292,7 +292,13 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 	}
 
 	var waitr chan error
-	var sunctxt = web.NewSunnyContext(w, r, this.id)
+	var sunctxt *web.Context
+
+	if rep == nil {
+		goto notfound
+	}
+
+	sunctxt = web.NewSunnyContext(w, r, this.id)
 	sunctxt.Event = this.ev.NewSubRouter(event.M{"sunny.context": sunctxt})
 	sunctxt.UPath = rep.UPath
 	sunctxt.PData = rep.PData
@@ -311,10 +317,6 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 			r.MultipartForm.RemoveAll()
 		}
 	}()
-
-	if rep == nil {
-		goto notfound
-	}
 
 	// all functions should not attempt to read form data
 	// until waitr is over at controller
