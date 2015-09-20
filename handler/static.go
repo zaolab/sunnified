@@ -13,10 +13,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path/filepath"
 )
 
 const GZIP_EXT = ".gz"
 const TYPE_DEFAULT = "application/octet-stream"
+
+var separatorString = string(filepath.Separator)
 
 type StaticFileHandler struct {
 	BasePath    string // relative path from application or absolute path
@@ -25,6 +28,7 @@ type StaticFileHandler struct {
 	Cache       int
 	Gzip        []string
 	GzippedFile bool
+	GzipMinSize int64
 }
 
 func NewStaticFileHandler() *StaticFileHandler {
@@ -59,11 +63,11 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if basepath != "" && basepath[len(basepath)-1] != '/' {
-		basepath = basepath + "/"
+	if blen := len(basepath); blen != 0 && basepath[blen-1] != '/' && basepath[blen-1] != '\\' {
+		basepath = basepath + separatorString
 	}
 
-	fullpath = basepath + urlpath
+	fullpath = filepath.FromSlash(basepath + urlpath)
 
 	if this.BaseURL != "" {
 		if !strings.HasPrefix(urlpath, this.BaseURL) {
@@ -78,7 +82,7 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	if err == nil {
 		if st.IsDir() {
-			fullpath = fullpath + "/index.html"
+			fullpath = fullpath + separatorString + "index.html"
 			st, err = os.Stat(fullpath)
 
 			if err != nil || st.IsDir() {
@@ -94,11 +98,11 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	var clen int64 = st.Size()
 	var modtime time.Time = st.ModTime()
 	var ext = path.Ext(fullpath)
-	var usegzip = (gzipextl == 0 && this.GzippedFile) || (gzipextl > 0 && (this.Gzip[0] == "*" || validate.IsIn(ext, this.Gzip...)))
+	var usegzip = clen > this.GzipMinSize && ((gzipextl == 0 && this.GzippedFile) || (gzipextl > 0 && (this.Gzip[0] == "*" || validate.IsIn(ext, this.Gzip...))))
+	var gzpath = fullpath + GZIP_EXT
 
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && usegzip {
 		if this.GzippedFile {
-			var gzpath = fullpath + GZIP_EXT
 			var stgz, err = os.Stat(gzpath)
 
 			if err == nil && !stgz.IsDir() && (stgz.ModTime().After(modtime) || stgz.ModTime().Equal(modtime)) {
@@ -153,9 +157,14 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 		// serveContent will not write to response if client already has a copy of file making the .gz local file empty
 		if this.GzippedFile && r.Method != "HEAD" && r.Header.Get("If-Modified-Since") == "" && r.Header.Get("If-None-Match") == "" && r.Header.Get("If-Range") == "" {
-			gzfile, err = os.Create(fullpath + GZIP_EXT)
-			if err == nil {
-				defer gzfile.Close()
+			if gzfile, err = os.OpenFile(gzpath + ".tmp", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644); err == nil {
+				defer func() {
+					gzfile.Close()
+					os.Remove(gzpath)
+					if err := os.Rename(gzpath + ".tmp", gzpath); err != nil {
+						os.Remove(gzpath + ".tmp")
+					}
+				}()
 			}
 		}
 
