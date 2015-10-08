@@ -273,8 +273,11 @@ func (this *CSRFGate) csrfPrevTokenString(t ...int64) string {
 
 func (this *CSRFGate) csrfIterToken(iteration int64) []byte {
 	itertoken := strconv.FormatInt(iteration, 10)
-	hash := hmac.New(sha1.New, this.config.Token).Sum([]byte(itertoken))
-	return hash[:]
+	h := hmac.New(sha1.New, this.config.Token)
+	h.Write([]byte(itertoken))
+	hash := make([]byte, 0, h.Size())
+	hash = h.Sum(hash)
+	return hash
 }
 
 func (this *CSRFGate) csrfIterTokenString(iteration int64) string {
