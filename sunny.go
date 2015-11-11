@@ -192,8 +192,7 @@ func (this *SunnyApp) triggerevent(sunctxt *web.Context, eventname string, info 
 }
 
 func (this *SunnyApp) decrunners() {
-	atomic.AddInt32(&this.runners, -1)
-	if atomic.LoadInt32(&this.runners) == 0 && atomic.LoadInt32(&this.closed) == 1 {
+	if runners := atomic.AddInt32(&this.runners, -1); runners == 0 && atomic.LoadInt32(&this.closed) == 1 {
 		removeSunnyApp(this.id)
 		this.callback()
 	}
@@ -216,12 +215,12 @@ func (this *SunnyApp) FindRequestedEndPoint(value map[string]interface{}, r *htt
 }
 
 func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *router.RequestedEndPoint) {
+	atomic.AddInt32(&this.runners, 1)
+	defer this.decrunners()
+
 	if atomic.LoadInt32(&this.closed) == 1 || w == nil || r == nil {
 		return
 	}
-
-	atomic.AddInt32(&this.runners, 1)
-	defer this.decrunners()
 
 	w = &SunnyResponseWriter{
 		Status:         200,
@@ -347,22 +346,21 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 	return
 
 notfound:
-	// TODO: notify multiparser to stop parsing if it hasn't already
 	handler.NotFound(w, r)
 }
 
 func (this *SunnyApp) Close(callback func()) bool {
 	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	if callback != nil {
+		this._callback = callback
+	}
+	this.mutex.Unlock()
 
 	if atomic.CompareAndSwapInt32(&this.closed, 0, 1) {
-		if atomic.LoadInt32(&this.runners) == 0 && callback != nil {
+		if atomic.AddInt32(&this.runners, -1) == 0 {
 			removeSunnyApp(this.id)
-			callback()
-		} else {
-			this._callback = callback
+			this.callback()
 		}
-
 		return true
 	}
 
@@ -393,6 +391,7 @@ func NewSunnyApp() (ss *SunnyApp) {
 		MiddleWares: make([]mware.MiddleWare, 0, 5),
 		MaxFileSize: DEFAULT_MAX_FILESIZE,
 		controllers: controller.NewControllerGroup(),
+		runners:     1,
 	}
 
 	mutex.Lock()
