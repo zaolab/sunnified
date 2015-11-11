@@ -1,8 +1,6 @@
 package sunnified
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/zaolab/sunnified/config"
 	"github.com/zaolab/sunnified/handler"
@@ -10,23 +8,20 @@ import (
 	"github.com/zaolab/sunnified/mware"
 	"github.com/zaolab/sunnified/router"
 	"github.com/zaolab/sunnified/util/event"
-	"github.com/zaolab/sunnified/util/validate"
 	"github.com/zaolab/sunnified/web"
 	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
-	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 const REQ_TIMEOUT time.Duration = 10 * 60 * 1000 * 1000 * 1000 // 10mins
-const DEFAULT_MAX_FILESIZE int64 = 104857600                   // 100MB
+const DEFAULT_MAX_FILESIZE int64 = 26214400                    // 25MB
 
 var (
 	mutex   sync.RWMutex
@@ -56,6 +51,7 @@ type SunnyApp struct {
 	ev          *event.EventRouter
 	controllers *controller.ControllerGroup
 	ctrlhand    *handler.DynamicHandler
+	resources   map[string]func() interface{}
 }
 
 func (this *SunnyApp) Run(params map[string]interface{}) {
@@ -153,6 +149,13 @@ func (this *SunnyApp) SubRouter(name string) (rt router.Router) {
 	return rt
 }
 
+func (this *SunnyApp) AddResourceFunc(name string, f func() interface{}) {
+	if this.resources == nil {
+		this.resources = make(map[string]func() interface{})
+	}
+	this.resources[name] = f
+}
+
 func (this *SunnyApp) createDynamicHandler() {
 	if this.ctrlhand == nil {
 		this.ctrlhand = handler.NewDynamicHandler(this.controllers)
@@ -170,88 +173,22 @@ func (this *SunnyApp) callback() {
 }
 
 func (this *SunnyApp) triggererror(sunctxt *web.Context, err interface{}) {
-	if sunctxt != nil && sunctxt.Event != nil {
-		sunctxt.Event.CreateTrigger("sunny").Fire("error500", map[string]interface{}{"sunny.error": err})
-	} else if this.ev != nil {
-		this.ev.CreateTrigger("sunny").Fire("error500", map[string]interface{}{"sunny.context": nil, "sunny.error": err})
+	this.triggerevent(sunctxt, "error", map[string]interface{}{"sunny.error": err})
+	if sunctxt != nil {
+		handler.InternalServerError(sunctxt.Response, sunctxt.Request)
 	}
-	handler.InternalServerError(sunctxt.Response, sunctxt.Request)
 }
 
-func (this *SunnyApp) parsereq(w http.ResponseWriter, r *http.Request) (waitr chan error) {
-	waitr = make(chan error, 1)
-
-	if validate.IsIn(r.Method, "POST", "PUT", "DELETE") {
-		if this.MaxFileSize > 0 && strings.ToLower(r.Header.Get("Expect")) == "100-continue" &&
-			r.ContentLength != -1 && r.ContentLength > this.MaxFileSize {
-
-			w.Header().Set("Connection", "close")
-			w.WriteHeader(http.StatusExpectationFailed)
-			return nil
+func (this *SunnyApp) triggerevent(sunctxt *web.Context, eventname string, info map[string]interface{}) {
+	if sunctxt != nil && sunctxt.Event != nil {
+		sunctxt.Event.CreateTrigger("sunny").Fire(eventname, info)
+	} else if this.ev != nil {
+		if info == nil {
+			info = make(map[string]interface{})
 		}
-
-		r.Body = http.MaxBytesReader(w, r.Body, this.MaxFileSize)
-		go func() {
-			var err error
-			defer func() {
-				if panicerr := recover(); panicerr != nil {
-					log.Println(panicerr, err)
-					waitr <- errors.New("Form parsing exited with panic")
-				} else {
-					waitr <- err
-				}
-			}()
-
-			// angularjs post with application/json content-type by default
-			if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json;") {
-				var content map[string]interface{}
-				var f = make(url.Values)
-				err = json.NewDecoder(r.Body).Decode(&content)
-
-				for k, v := range content {
-					if slice, ok := v.([]string); ok {
-						for _, s := range slice {
-							f.Add(k, s)
-						}
-					} else if s, ok := v.(string); ok {
-						f.Add(k, s)
-					}
-				}
-
-				if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
-					r.PostForm = f
-					r.Form = make(url.Values)
-					for k, v := range r.PostForm {
-						r.Form[k] = append(r.Form[k], v...)
-					}
-				} else {
-					r.Form = f
-					r.PostForm = make(url.Values)
-				}
-
-				var queryValues url.Values
-				if queryValues, err = url.ParseQuery(r.URL.RawQuery); err == nil {
-					for k, v := range queryValues {
-						r.Form[k] = append(r.Form[k], v...)
-					}
-				}
-			} else {
-				// 2MB in memory
-				// passing back of ErrNotMultipart is only >= golang1.3
-				if err = r.ParseMultipartForm(2097152); err == http.ErrNotMultipart {
-					err = nil
-				} else if (r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH") && err == nil && r.MultipartForm != nil {
-					for k, v := range r.MultipartForm.Value {
-						r.PostForm[k] = append(r.PostForm[k], v...)
-					}
-				}
-			}
-		}()
-	} else {
-		waitr <- nil
+		info["sunny.context"] = nil
+		this.ev.CreateTrigger("sunny").Fire(eventname, info)
 	}
-
-	return
 }
 
 func (this *SunnyApp) decrunners() {
@@ -279,7 +216,7 @@ func (this *SunnyApp) FindRequestedEndPoint(value map[string]interface{}, r *htt
 }
 
 func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *router.RequestedEndPoint) {
-	if atomic.LoadInt32(&this.closed) == 1 {
+	if atomic.LoadInt32(&this.closed) == 1 || w == nil || r == nil {
 		return
 	}
 
@@ -291,39 +228,47 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		ResponseWriter: w,
 	}
 
-	var waitr chan error
 	var sunctxt *web.Context
 
 	if rep == nil {
 		goto notfound
 	}
 
-	sunctxt = web.NewSunnyContext(w, r, this.id)
-	sunctxt.Event = this.ev.NewSubRouter(event.M{"sunny.context": sunctxt})
-	sunctxt.UPath = rep.UPath
-	sunctxt.PData = rep.PData
-	sunctxt.Ext = rep.Ext
-
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println(err)
-			this.triggererror(sunctxt, err)
+			if re, ok := err.(web.Redirection); ok {
+				this.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": re})
+			} else if e, ok := err.(web.ContextError); ok {
+				this.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": e})
+				handler.ErrorHtml(w, r, e.Code())
+			} else {
+				log.Println(err)
+				this.triggererror(sunctxt, err)
+			}
 		}
-		log.Println(fmt.Sprintf("ip: %s; r: %s %s; d: %s; %d",
-			sunctxt.RemoteAddress().String(), r.Method, r.URL.Path, time.Since(sunctxt.StartTime()).String(),
-			w.(*SunnyResponseWriter).Status))
-		sunctxt.Close()
+
+		if sunctxt != nil {
+			log.Println(fmt.Sprintf("ip: %s; r: %s %s; d: %s; %d",
+				sunctxt.RemoteAddress().String(), r.Method, r.URL.Path, time.Since(sunctxt.StartTime()).String(),
+				w.(*SunnyResponseWriter).Status))
+			sunctxt.Close()
+		}
 		if r.MultipartForm != nil {
 			r.MultipartForm.RemoveAll()
 		}
 	}()
 
-	// all functions should not attempt to read form data
-	// until waitr is over at controller
-	if waitr = this.parsereq(w, r); waitr == nil {
-		return
+	sunctxt = web.NewSunnyContext(w, r, this.id)
+	sunctxt.Event = this.ev.NewSubRouter(event.M{"sunny.context": sunctxt})
+	sunctxt.UPath = rep.UPath
+	sunctxt.PData = rep.PData
+	sunctxt.Ext = rep.Ext
+	sunctxt.MaxFileSize = this.MaxFileSize
+	sunctxt.ParseRequestData()
+
+	for n, f := range this.resources {
+		sunctxt.SetResource(n, f())
 	}
-	defer close(waitr)
 
 	for _, midware := range this.MiddleWares {
 		midware.Request(sunctxt)
@@ -346,66 +291,48 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 			goto notfound
 		}
 
-		// all request should default to no cache
-		// TODO: create a middleware for this instead...
-		//if r.Method != "HEAD" && w.Header().Get("Cache-Control") == "" {
-		//	sunctxt.PrivateNoCache()
-		//}
-
 		sunctxt.Module = ctrlmgr.ModuleName()
 		sunctxt.Controller = ctrlmgr.ControllerName()
 		sunctxt.Action = ctrlmgr.ActionName()
 
-		if err := <-waitr; err != nil {
+		if err := sunctxt.WaitRequestData(); err != nil {
 			setreqerror(err, w)
 			return
 		}
 
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					switch e := err.(type) {
-					case web.RedirectError:
-					case web.AppError:
-						handler.ErrorHtml(w, r, e.Code())
-					default:
-						panic(e)
-					}
-				}
-			}()
+		// TODO: Controller should not matter which is called first..
+		// make it a goroutine once determined sunctxt and ctrlmgr is completely thread-safe
+		for _, midware := range this.MiddleWares {
+			midware.Controller(sunctxt, ctrlmgr)
+		}
 
-			// TODO: Controller should not matter which is called first..
+		state, vw := ctrlmgr.PrepareAndExecute()
+		defer ctrlmgr.Cleanup()
+
+		if vw != nil && !sunctxt.IsRedirecting() && !sunctxt.HasError() {
+			setFuncMap(sunctxt, vw)
+
+			// TODO: View should not matter which is called first..
 			// make it a goroutine once determined sunctxt and ctrlmgr is completely thread-safe
 			for _, midware := range this.MiddleWares {
-				midware.Controller(sunctxt, ctrlmgr)
+				midware.View(sunctxt, vw)
 			}
 
-			state, vw := ctrlmgr.PrepareAndExecute()
-
-			if vw != nil && !sunctxt.IsRedirecting() && !sunctxt.HasError() {
-				setFuncMap(sunctxt, vw)
-
-				// TODO: View should not matter which is called first..
-				// make it a goroutine once determined sunctxt and ctrlmgr is completely thread-safe
-				for _, midware := range this.MiddleWares {
-					midware.View(sunctxt, vw)
-				}
-
-				if err := ctrlmgr.PublishView(); err != nil {
-					log.Println(err)
-				}
+			if err := ctrlmgr.PublishView(); err != nil {
+				log.Println(err)
 			}
+		}
 
-			if sunctxt.HasError() {
-				handler.ErrorHtml(w, r, sunctxt.ErrorCode())
-			} else if !sunctxt.IsRedirecting() && state != -1 && (state < 200 || state >= 300) {
-				handler.ErrorHtml(w, r, state)
-			}
-		}()
-
-		ctrlmgr.Cleanup()
+		if sunctxt.HasError() {
+			this.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": sunctxt.AppError()})
+			handler.ErrorHtml(w, r, sunctxt.ErrorCode())
+		} else if sunctxt.IsRedirecting() {
+			this.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": sunctxt.Redirection()})
+		} else if state != -1 && (state < 200 || state >= 300) {
+			handler.ErrorHtml(w, r, state)
+		}
 	} else {
-		if err := <-waitr; err != nil {
+		if err := sunctxt.WaitRequestData(); err != nil {
 			setreqerror(err, w)
 			return
 		}
