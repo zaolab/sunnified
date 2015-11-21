@@ -59,8 +59,8 @@ func GetReqMethod(r *http.Request) ReqMethod {
 	return ReqMethod(0)
 }
 
-func GetXReqMethod(r *http.Request) ReqMethod {
-	var xreq = web.XMethod(r)
+func GetXReqMethod(ctxt *web.Context) ReqMethod {
+	var xreq = ctxt.XMethod()
 
 	switch xreq {
 	case "POST":
@@ -171,8 +171,8 @@ func (this *ControllerMeta) Action(name string, reqtype ReqMethod) *ActionMeta {
 	return this.meths.Get(name, reqtype)
 }
 
-func (this ControllerMeta) ActionFromRequest(name string, r *http.Request) *ActionMeta {
-	return this.Action(name, GetXReqMethod(r))
+func (this ControllerMeta) ActionFromRequest(name string, ctxt *web.Context) *ActionMeta {
+	return this.Action(name, GetXReqMethod(ctxt))
 }
 
 func (this ControllerMeta) ActionAvailableMethods(name string) ReqMethod {

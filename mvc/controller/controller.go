@@ -125,7 +125,7 @@ func (this *ControlManager) Controller() reflect.Value {
 }
 
 func (this *ControlManager) ActionMeta() *ActionMeta {
-	return this.controlmeta.ActionFromRequest(this.MvcMeta()[mvc.MVC_ACTION], this.context.Request)
+	return this.controlmeta.ActionFromRequest(this.MvcMeta()[mvc.MVC_ACTION], this.context)
 }
 
 func (this *ControlManager) AvailableMethods() ReqMethod {
