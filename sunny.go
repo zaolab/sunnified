@@ -29,13 +29,32 @@ var (
 )
 
 type SunnyResponseWriter struct {
-	Status int
 	http.ResponseWriter
+	Status   int
+	midwares []func(*web.Context)
+	written  bool
+	ctxt     *web.Context
 }
 
 func (this *SunnyResponseWriter) WriteHeader(status int) {
-	this.Status = status
-	this.ResponseWriter.WriteHeader(status)
+	if !this.written {
+		this.written = true
+		defer func() {
+			recover()
+			this.Status = status
+			this.ResponseWriter.WriteHeader(status)
+		}()
+		for _, mw := range this.midwares {
+			mw(this.ctxt)
+		}
+	}
+}
+
+func (this *SunnyResponseWriter) Write(b []byte) (int, error) {
+	if !this.written {
+		this.WriteHeader(200)
+	}
+	return this.ResponseWriter.Write(b)
 }
 
 type SunnyApp struct {
@@ -222,10 +241,12 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	w = &SunnyResponseWriter{
+	sw := &SunnyResponseWriter{
 		Status:         200,
 		ResponseWriter: w,
+		midwares:       make([]func(*web.Context), 0, len(this.MiddleWares)),
 	}
+	w = sw
 
 	var sunctxt *web.Context
 
@@ -264,6 +285,7 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 	sunctxt.Ext = rep.Ext
 	sunctxt.MaxFileSize = this.MaxFileSize
 	sunctxt.ParseRequestData()
+	sw.ctxt = sunctxt
 
 	for n, f := range this.resources {
 		sunctxt.SetResource(n, f())
@@ -280,7 +302,7 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 
 	for _, midware := range this.MiddleWares {
 		midware.Body(sunctxt)
-		defer midware.Response(sunctxt)
+		sw.midwares = append(sw.midwares, midware.Response)
 	}
 
 	if ctrl, ok := rep.Handler.(controller.ControlHandler); ok {
