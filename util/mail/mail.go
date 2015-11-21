@@ -113,7 +113,7 @@ func (this *Mail) SetAttachmentLimit(l int64) {
 
 func (this *Mail) SetTo(email string, name string) error {
 	if validate.IsEmail(email) {
-		this.to = Addresses{mail.Address{name, email}}
+		this.to = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -122,7 +122,7 @@ func (this *Mail) SetTo(email string, name string) error {
 
 func (this *Mail) AddTo(email, name string) error {
 	if validate.IsEmail(email) {
-		this.to = append(this.to, mail.Address{name, email})
+		this.to = append(this.to, mail.Address{Name: name, Address: email})
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -137,7 +137,7 @@ func (this *Mail) To() Addresses {
 
 func (this *Mail) SetFrom(email, name string) error {
 	if validate.IsEmail(email) {
-		this.from = mail.Address{name, email}
+		this.from = mail.Address{Name: name, Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -150,7 +150,7 @@ func (this *Mail) From() mail.Address {
 
 func (this *Mail) SetCc(email, name string) error {
 	if validate.IsEmail(email) {
-		this.cc = Addresses{mail.Address{name, email}}
+		this.cc = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -159,7 +159,7 @@ func (this *Mail) SetCc(email, name string) error {
 
 func (this *Mail) AddCc(email, name string) error {
 	if validate.IsEmail(email) {
-		this.cc = append(this.cc, mail.Address{name, email})
+		this.cc = append(this.cc, mail.Address{Name: name, Address: email})
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -174,7 +174,7 @@ func (this *Mail) Cc() Addresses {
 
 func (this *Mail) SetBcc(email, name string) error {
 	if validate.IsEmail(email) {
-		a := mail.Address{name, email}
+		a := mail.Address{Name: name, Address: email}
 		this.bcc = Addresses{a}
 		return nil
 	} else {
@@ -184,7 +184,7 @@ func (this *Mail) SetBcc(email, name string) error {
 
 func (this *Mail) AddBcc(email, name string) error {
 	if validate.IsEmail(email) {
-		a := mail.Address{name, email}
+		a := mail.Address{Name: name, Address: email}
 		this.bcc = append(this.bcc, a)
 		return nil
 	} else {
@@ -200,7 +200,7 @@ func (this *Mail) Bcc() Addresses {
 
 func (this *Mail) SetReplyTo(email, name string) error {
 	if validate.IsEmail(email) {
-		this.replyto = mail.Address{name, email}
+		this.replyto = mail.Address{Name: name, Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -213,7 +213,7 @@ func (this *Mail) ReplyTo() mail.Address {
 
 func (this *Mail) SetBounceTo(email string) error {
 	if validate.IsEmail(email) {
-		this.bounce = mail.Address{"", email}
+		this.bounce = mail.Address{Name: "", Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
@@ -231,7 +231,7 @@ func (this *Mail) BounceTo() mail.Address {
 func (this *Mail) SetSubject(subj string) {
 	// diff golang version output diff string if missiong email address
 	// using a constant email address, it is then possible to determine the output
-	s := mail.Address{subj, "a@abc.com"}
+	s := mail.Address{Name: subj, Address: "a@abc.com"}
 	subj = s.String()
 	this.subject = strings.TrimSpace(strings.TrimSuffix(subj, "<a@abc.com>"))
 }
