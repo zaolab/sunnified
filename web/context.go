@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/gorilla/websocket"
 )
 
 func NewSunnyContext(w http.ResponseWriter, r *http.Request, sunnyserver int) (ctxt *Context) {
@@ -52,6 +53,7 @@ type Context struct {
 	Session     SessionManager
 	Cache       CacheManager
 	MaxFileSize int64
+	WebSocket   *websocket.Conn
 	resource    map[string]interface{}
 	sunnyserver int
 	issunny     bool
@@ -654,6 +656,10 @@ func (this *Context) URL(path string, qstr ...Q) string {
 	return buf.String()
 }
 
+func (this *Context) URLQ(path string, s ...string) string {
+	return this.URL(path, this.QueryStr(s...))
+}
+
 func (this *Context) QueryStr(s ...string) (qs Q) {
 	qs = make(Q)
 	isname := true
@@ -696,6 +702,22 @@ func (this *Context) SetResource(name string, ref interface{}) {
 	this.resource[name] = ref
 }
 
+func (this *Context) ToWebSocket(upgrader *websocket.Upgrader, header http.Header) (err error) {
+	if upgrader == nil {
+		upgrader = &websocket.Upgrader{}
+		upgrader.CheckOrigin = func(_ *http.Request) bool {
+			return true
+		}
+		upgrader.Error = func(w http.ResponseWriter, r *http.Request, status int, err error) {
+			log.Println(err)
+			http.Error(w, http.StatusText(status), status)
+		}
+	}
+
+	this.WebSocket, err = upgrader.Upgrade(this.Response, this.Request, header)
+	return
+}
+
 func (this *Context) Close() {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
@@ -709,6 +731,10 @@ func (this *Context) Close() {
 	this.Response = nil
 	this.SetTitle_ = nil
 	this.rdata = nil
+	if this.WebSocket != nil {
+		this.WebSocket.Close()
+		this.WebSocket = nil
+	}
 }
 
 func makeRequestData(k string, c map[string]interface{}, f url.Values) {
