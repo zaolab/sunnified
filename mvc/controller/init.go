@@ -119,56 +119,89 @@ func (this *ControllerGroup) AddModule(alias string, modname string) {
 
 func (this *ControllerGroup) AddController(cinterface interface{}) (string, string) {
 	this.detmutex.Lock()
-	this.detmutex.Unlock()
+	defer this.detmutex.Unlock()
 
-	rtype := reflect.TypeOf(cinterface)
-	rawtype := rtype
+	cm, controller, alias, modname := MakeControllerMeta(cinterface)
+
+	if this.details[alias] == nil {
+		this.details[alias] = make(map[string]*ControllerMeta)
+	} else if c, exists := this.details[alias][controller]; exists {
+		if cm.rtype == c.rtype {
+			return alias, controller
+		} else {
+			panic("Duplicate controller name: " + alias + "." + controller)
+		}
+	}
+
+	this.createModAlias(alias, modname)
+	this.details[alias][controller] = cm
+	return alias, controller
+}
+
+func (this *ControllerGroup) createModAlias(alias, modname string) {
+	this.modmutex.Lock()
+	defer this.modmutex.Unlock()
+
+	// check to see if module alias extracted already exists
+	// if not add it into the global modules var
+	if _, ok := this.modules[alias]; ok && this.modules[alias] != modname {
+		panic("Duplicate module name: " + alias + ", " + this.modules[alias])
+	} else if !ok {
+		this.modules[alias] = modname
+	}
+}
+
+func HasModule(mod string) bool {
+	return group.HasModule(mod)
+}
+
+func Module(mod string) (m map[string]*ControllerMeta) {
+	return group.Module(mod)
+}
+
+func HasController(mod, con string) (exists bool) {
+	return group.HasController(mod, con)
+}
+
+func Controller(mod, con string) *ControllerMeta {
+	return group.Controller(mod, con)
+}
+
+func AddModule(alias string, modname string) {
+	group.AddModule(alias, modname)
+}
+
+func AddController(cinterface interface{}) (string, string) {
+	return group.AddController(cinterface)
+}
+
+func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, mod, modfull string) {
+	var (
+		reqmeth ReqMethod
+		ownname string
+		rtype = reflect.TypeOf(cinterface)
+		rawtype = rtype
+	)
+
 	if rtype.Kind() == reflect.Ptr {
 		rtype = rtype.Elem()
 	}
 
-	modname, ownname := rtype.PkgPath(), strings.ToLower(rtype.Name())
+	modfull, ownname = rtype.PkgPath(), strings.ToLower(rtype.Name())
 
-	var alias string
-	var ok bool
-
-	this.modmutex.Lock()
-	defer this.modmutex.Unlock()
-
-	if alias, ok = this.modules[modname]; !ok {
-		if slashindex := strings.LastIndex(modname, "/"); slashindex >= 0 {
-			alias = modname[slashindex+1:]
-		} else {
-			alias = modname
-		}
-
-		alias = strings.ToLower(alias)
-
-		// check to see if module alias extracted already exists
-		// if not add it into the global modules var
-		if _, ok = this.modules[alias]; ok && this.modules[alias] != modname {
-			panic("Duplicate module name: " + alias + ", " + this.modules[alias])
-		} else {
-			this.modules[alias] = modname
-		}
+	if slashindex := strings.LastIndex(modfull, "/"); slashindex >= 0 {
+		mod = modfull[slashindex+1:]
+	} else {
+		mod = modfull
 	}
 
-	if _, ok := this.details[alias]; !ok {
-		this.details[alias] = make(map[string]*ControllerMeta)
-	}
+	mod = strings.ToLower(mod)
 
-	controller, reqmeth := parseReqMethod(ownname)
+	ctrlname, reqmeth = parseReqMethod(ownname)
 
-	if cm, exists := this.details[alias][controller]; exists {
-		if cm.rtype == rawtype {
-			panic("Duplicate controller name: " + alias + "." + controller)
-		}
-		return alias, controller
-	}
-
-	cm := &ControllerMeta{
+	cm = &ControllerMeta{
 		name:    ownname,
-		modname: alias,
+		modname: mod,
 		rtype:   rawtype,
 		meths:   make(ActionMap),
 		reqmeth: reqmeth,
@@ -203,6 +236,10 @@ func (this *ControllerGroup) AddController(cinterface interface{}) (string, stri
 		if ismvcmethod || meth.Name[len(meth.Name)-1] == '_' {
 			continue
 		}
+		_, ismvcmethod = type_webcontext.MethodByName(meth.Name)
+		if ismvcmethod {
+			continue
+		}
 
 		action, reqmeth := parseReqMethod(meth.Name)
 
@@ -220,32 +257,7 @@ func (this *ControllerGroup) AddController(cinterface interface{}) (string, stri
 		cm.meths.Add(action, ameta)
 	}
 
-	this.details[alias][controller] = cm
-	return alias, controller
-}
-
-func HasModule(mod string) bool {
-	return group.HasModule(mod)
-}
-
-func Module(mod string) (m map[string]*ControllerMeta) {
-	return group.Module(mod)
-}
-
-func HasController(mod, con string) (exists bool) {
-	return group.HasController(mod, con)
-}
-
-func Controller(mod, con string) (c *ControllerMeta) {
-	return group.Controller(mod, con)
-}
-
-func AddModule(alias string, modname string) {
-	group.AddModule(alias, modname)
-}
-
-func AddController(cinterface interface{}) (string, string) {
-	return group.AddController(cinterface)
+	return
 }
 
 func parseResultStyle(rtype reflect.Type, iscontrol bool) (rs ResultStyle, isconstruct bool) {
@@ -277,6 +289,8 @@ func parseResultStyle(rtype reflect.Type, iscontrol bool) (rs ResultStyle, iscon
 			rs.vmap = true
 		} else if out == type_mapstringinterface {
 			rs.mapsi = true
+		} else if out.Implements(type_mvc_view) {
+			rs.view = true
 		}
 
 		// check for status output
