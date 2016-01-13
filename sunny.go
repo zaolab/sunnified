@@ -40,12 +40,15 @@ func (this *SunnyResponseWriter) WriteHeader(status int) {
 	if !this.written {
 		this.written = true
 		defer func() {
-			recover()
+			if err := recover(); err != nil {
+				log.Println(err)
+			}
 			this.Status = status
 			this.ResponseWriter.WriteHeader(status)
+			this.ctxt = nil
 		}()
-		for _, mw := range this.midwares {
-			mw(this.ctxt)
+		for i := len(this.midwares)-1; i >= 0; i-- {
+			this.midwares[i](this.ctxt)
 		}
 	}
 }
@@ -55,6 +58,10 @@ func (this *SunnyResponseWriter) Write(b []byte) (int, error) {
 		this.WriteHeader(200)
 	}
 	return this.ResponseWriter.Write(b)
+}
+
+func (this *SunnyResponseWriter) ParentResponseWriter() http.ResponseWriter {
+	return this.ResponseWriter
 }
 
 type SunnyApp struct {
@@ -71,6 +78,7 @@ type SunnyApp struct {
 	controllers *controller.ControllerGroup
 	ctrlhand    *handler.DynamicHandler
 	resources   map[string]func() interface{}
+	mwareresp   []func(*web.Context)
 }
 
 func (this *SunnyApp) Run(params map[string]interface{}) {
@@ -133,6 +141,7 @@ func (this *SunnyApp) IsClosed() bool {
 
 func (this *SunnyApp) AddMiddleWare(mwarecon mware.MiddleWare) {
 	this.MiddleWares = append(this.MiddleWares, mwarecon)
+	this.mwareresp = append(this.mwareresp, mwarecon.Response)
 }
 
 func (this *SunnyApp) AddController(cinterface interface{}) {
@@ -244,7 +253,7 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 	sw := &SunnyResponseWriter{
 		Status:         200,
 		ResponseWriter: w,
-		midwares:       make([]func(*web.Context), 0, len(this.MiddleWares)),
+		midwares:       nil,
 	}
 	w = sw
 
@@ -300,9 +309,9 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	sw.midwares = this.mwareresp
 	for _, midware := range this.MiddleWares {
 		midware.Body(sunctxt)
-		sw.midwares = append(sw.midwares, midware.Response)
 	}
 
 	if ctrl, ok := rep.Handler.(controller.ControlHandler); ok {
@@ -414,6 +423,7 @@ func NewSunnyApp() (ss *SunnyApp) {
 		MaxFileSize: DEFAULT_MAX_FILESIZE,
 		controllers: controller.NewControllerGroup(),
 		runners:     1,
+		mwareresp:   make([]func(*web.Context), 0, 5),
 	}
 
 	mutex.Lock()

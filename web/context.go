@@ -21,6 +21,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type ResponseWriterChild interface{
+	ParentResponseWriter() http.ResponseWriter
+}
+
 func NewSunnyContext(w http.ResponseWriter, r *http.Request, sunnyserver int) (ctxt *Context) {
 	ctxt = NewContext(w, r)
 	ctxt.sunnyserver = sunnyserver
@@ -714,7 +718,21 @@ func (this *Context) ToWebSocket(upgrader *websocket.Upgrader, header http.Heade
 		}
 	}
 
-	this.WebSocket, err = upgrader.Upgrade(this.Response, this.Request, header)
+	this.WebSocket, err = upgrader.Upgrade(this.RootResponse(), this.Request, header)
+	return
+}
+
+func (this *Context) RootResponse() (resp http.ResponseWriter) {
+	resp = this.Response
+
+	for {
+		if cwriter, ok := resp.(ResponseWriterChild); ok {
+			resp = cwriter.ParentResponseWriter()
+			continue
+		}
+		break
+	}
+
 	return
 }
 

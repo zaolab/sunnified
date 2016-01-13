@@ -201,7 +201,7 @@ func (this *ResultView) Publish(ctxt *web.Context) (err error) {
 
 			//mc.Set(&memcache.Item{Key: ctxt.Request.RequestURI, Value: b.Bytes(), Expiration: 3600})
 
-			if flushw, ok := ctxt.Response.(http.Flusher); ok {
+			if flushw, ok := ctxt.RootResponse().(http.Flusher); ok {
 				flushw.Flush()
 			}
 		} else {
