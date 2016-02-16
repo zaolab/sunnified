@@ -2,7 +2,7 @@ package sec
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/scrypt"
+	"golang.org/x/crypto/scrypt"
 	"encoding/base64"
 	"errors"
 )
