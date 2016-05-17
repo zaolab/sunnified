@@ -2,9 +2,10 @@ package sec
 
 import (
 	"bytes"
-	"golang.org/x/crypto/scrypt"
 	"encoding/base64"
 	"errors"
+
+	"golang.org/x/crypto/scrypt"
 )
 
 const DEFAULT_SALTLEN = 24
@@ -14,7 +15,7 @@ const DEFAULT_SALTLEN = 24
 const cryptiter uint8 = 1
 const scrypt_keylen = 64
 
-var ErrSaltGenFailed = errors.New("Unable to generate a random salt")
+var ErrSaltGenFailed = errors.New("unable to generate a random salt")
 
 type AuthPassword struct {
 	config AuthPasswordConfig
@@ -34,12 +35,12 @@ func NewAuthPassword(settings AuthPasswordConfig) *AuthPassword {
 	return &AuthPassword{config: settings}
 }
 
-func (this *AuthPassword) CryptPassword(pwd string) (string, error) {
-	nshift, r, p := getScryptCost(this.config.Strength)
+func (ap *AuthPassword) CryptPassword(pwd string) (string, error) {
+	nshift, r, p := getScryptCost(ap.config.Strength)
 	// since n must be 2^
 	n := int(1 << nshift)
 
-	salt := GenRandomBytes(int(this.config.Saltlen))
+	salt := GenRandomBytes(int(ap.config.Saltlen))
 	if salt == nil {
 		return "", ErrSaltGenFailed
 	}
@@ -50,26 +51,26 @@ func (this *AuthPassword) CryptPassword(pwd string) (string, error) {
 		return "", err
 	}
 
-	bslice := make([]byte, 1, this.config.Saltlen+scrypt_keylen+3)
-	bslice[0] = byte(this.config.Saltlen)
+	bslice := make([]byte, 1, ap.config.Saltlen+scrypt_keylen+3)
+	bslice[0] = byte(ap.config.Saltlen)
 	bslice = append(bslice, salt...)
-	bslice = append(bslice, byte(cryptiter), byte(this.config.Strength))
+	bslice = append(bslice, byte(cryptiter), byte(ap.config.Strength))
 	bslice = append(bslice, key...)
 	return base64.StdEncoding.EncodeToString(bslice), nil
 }
 
-func (this *AuthPassword) VerifyPassword(hashstr, pwd string) bool {
+func (ap *AuthPassword) VerifyPassword(hashstr, pwd string) bool {
 	return VerifyPassword(hashstr, pwd)
 }
 
 // when crypto is updated, the hash done using previous crypto can still be verified
 // and the new hash with the updated crypto will be returned
 // this allows rolling updates of new crypto hash function for password hashing
-func (this *AuthPassword) VerifyPasswordAndUpdateHash(hashstr, pwd string) (bool, string) {
+func (ap *AuthPassword) VerifyPasswordAndUpdateHash(hashstr, pwd string) (bool, string) {
 	ok, iter, strength, saltlen := VerifyPasswordGetMeta(hashstr, pwd)
 
-	if ok && (iter != cryptiter || strength != this.config.Strength || saltlen != this.config.Saltlen) {
-		hash, err := this.CryptPassword(pwd)
+	if ok && (iter != cryptiter || strength != ap.config.Strength || saltlen != ap.config.Saltlen) {
+		hash, err := ap.CryptPassword(pwd)
 		if err == nil {
 			return ok, hash
 		}
@@ -78,9 +79,9 @@ func (this *AuthPassword) VerifyPasswordAndUpdateHash(hashstr, pwd string) (bool
 	return ok, ""
 }
 
-func (this *AuthPassword) HashIsOutdated(hashstr string) bool {
+func (ap *AuthPassword) HashIsOutdated(hashstr string) bool {
 	key, salt, iter, strength := getKeySaltIterStrength(hashstr)
-	return key == nil || iter != cryptiter || strength != this.config.Strength || len(salt) != int(this.config.Saltlen)
+	return key == nil || iter != cryptiter || strength != ap.config.Strength || len(salt) != int(ap.config.Saltlen)
 }
 
 func getKeySaltIterStrength(hashstr string) ([]byte, []byte, uint8, int8) {

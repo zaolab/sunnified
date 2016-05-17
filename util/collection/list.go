@@ -2,9 +2,10 @@ package collection
 
 import (
 	"fmt"
-	"github.com/zaolab/sunnified/util"
 	"sort"
 	"sync"
+
+	"github.com/zaolab/sunnified/util"
 )
 
 const COMFORT_LEN = 10
@@ -32,133 +33,133 @@ func NewList(data ...interface{}) (li *List) {
 	return
 }
 
-func (this *List) getvalue(index interface{}) (interface{}, bool) {
+func (l *List) getvalue(index interface{}) (interface{}, bool) {
 	var i = index.(int)
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	if this.lenlist > i {
-		return this.list[i], true
+	if l.lenlist > i {
+		return l.list[i], true
 	}
 	return nil, false
 }
 
-func (this *List) MapValue(index int, value interface{}) (val interface{}) {
-	if val = this.Get(index); val != nil && value != nil {
+func (l *List) MapValue(index int, value interface{}) (val interface{}) {
+	if val = l.Get(index); val != nil && value != nil {
 		util.MapValue(value, val)
 	}
 	return
 }
 
-func (this *List) First() interface{} {
-	return this.Get(0)
+func (l *List) First() interface{} {
+	return l.Get(0)
 }
 
-func (this *List) Last() interface{} {
-	return this.Get(this.lenlist)
+func (l *List) Last() interface{} {
+	return l.Get(l.lenlist)
 }
 
-func (this *List) Append(value interface{}) Array {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.append(value)
-	return this
+func (l *List) Append(value interface{}) Array {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.append(value)
+	return l
 }
 
-func (this *List) append(value interface{}) {
-	if this.caplist == this.lenlist {
-		this.expand(this.lenlist + 1)
+func (l *List) append(value interface{}) {
+	if l.caplist == l.lenlist {
+		l.expand(l.lenlist + 1)
 	}
 
-	this.list[this.lenlist] = value
-	this.lenlist++
+	l.list[l.lenlist] = value
+	l.lenlist++
 }
 
-func (this *List) expand(length int) {
+func (l *List) expand(length int) {
 	// be sure calling method locks the list
-	if this.lenlist < length {
-		this.caplist = length + this.exlen
-		if exlen := int(this.caplist / 10); exlen > this.exlen {
-			this.exlen = exlen
+	if l.lenlist < length {
+		l.caplist = length + l.exlen
+		if exlen := int(l.caplist / 10); exlen > l.exlen {
+			l.exlen = exlen
 		}
-		tmplist := make([]interface{}, this.caplist)
-		copy(tmplist, this.list[0:this.lenlist])
-		this.list = tmplist
+		tmplist := make([]interface{}, l.caplist)
+		copy(tmplist, l.list[0:l.lenlist])
+		l.list = tmplist
 	}
 }
 
-func (this *List) Len() int {
-	return this.lenlist
+func (l *List) Len() int {
+	return l.lenlist
 }
 
-func (this *List) Extend(values []interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.extend(values)
+func (l *List) Extend(values []interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.extend(values)
 }
 
-func (this *List) extend(values []interface{}) {
+func (l *List) extend(values []interface{}) {
 	vallen := len(values)
 
 	if vallen > 0 {
-		finlen := this.prepareSize(vallen)
+		finlen := l.prepareSize(vallen)
 
-		copy(this.list[this.lenlist:finlen], values)
-		this.lenlist = finlen
+		copy(l.list[l.lenlist:finlen], values)
+		l.lenlist = finlen
 	}
 }
 
-func (this *List) prepareSize(size int) int {
-	avalen := this.lenlist - this.caplist
-	finlen := this.lenlist + size
+func (l *List) prepareSize(size int) int {
+	avalen := l.lenlist - l.caplist
+	finlen := l.lenlist + size
 
 	if avalen < size {
-		this.expand(finlen)
+		l.expand(finlen)
 	}
 
 	return finlen
 }
 
-func (this *List) ExtendArray(arr Array) {
+func (l *List) ExtendArray(arr Array) {
 	if arrlen := arr.Len(); arrlen > 0 {
-		this.mutex.Lock()
-		defer this.mutex.Unlock()
+		l.mutex.Lock()
+		defer l.mutex.Unlock()
 
-		this.prepareSize(arrlen)
+		l.prepareSize(arrlen)
 
 		var value interface{}
 		for iter := arr.Iterator(); iter.Next(&value); {
-			this.append(value)
+			l.append(value)
 		}
 	}
 }
 
-func (this *List) ExtendList(list *List) {
+func (l *List) ExtendList(list *List) {
 	list.mutex.RLock()
 	defer list.mutex.RUnlock()
-	this.Extend(list.list[0:list.lenlist])
+	l.Extend(list.list[0:list.lenlist])
 }
 
-func (this *List) ExtendSet(set *Set) {
+func (l *List) ExtendSet(set *Set) {
 	set.list.mutex.RLock()
 	defer set.list.mutex.RUnlock()
-	this.Extend(set.list.list[0:set.list.lenlist])
+	l.Extend(set.list.list[0:set.list.lenlist])
 }
 
-func (this *List) Index(value interface{}) int {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Index(value interface{}) int {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	return this.index(value)
+	return l.index(value)
 }
 
-func (this *List) Indexes(value interface{}) (indexes []int) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Indexes(value interface{}) (indexes []int) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	indexes = make([]int, 0, 2)
 
-	for i, val := range this.list {
+	for i, val := range l.list {
 		if val == value {
 			indexes = append(indexes, i)
 		}
@@ -167,12 +168,12 @@ func (this *List) Indexes(value interface{}) (indexes []int) {
 	return
 }
 
-func (this *List) LastIndex(value interface{}) int {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) LastIndex(value interface{}) int {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	for i := this.lenlist - 1; i >= 0; i-- {
-		if this.list[i] == value {
+	for i := l.lenlist - 1; i >= 0; i-- {
+		if l.list[i] == value {
 			return i
 		}
 	}
@@ -180,8 +181,8 @@ func (this *List) LastIndex(value interface{}) int {
 	return -1
 }
 
-func (this *List) index(value interface{}) int {
-	for i, val := range this.list {
+func (l *List) index(value interface{}) int {
+	for i, val := range l.list {
 		if val == value {
 			return i
 		}
@@ -190,228 +191,228 @@ func (this *List) index(value interface{}) int {
 	return -1
 }
 
-func (this *List) Contains(value ...interface{}) bool {
+func (l *List) Contains(value ...interface{}) bool {
 	for _, val := range value {
-		if this.Index(val) == -1 {
+		if l.Index(val) == -1 {
 			return false
 		}
 	}
 	return true
 }
 
-func (this *List) Set(index int, value interface{}) Array {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.set(index, value)
-	return this
+func (l *List) Set(index int, value interface{}) Array {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.set(index, value)
+	return l
 }
 
-func (this *List) set(index int, value interface{}) {
-	if index >= this.caplist {
-		this.expand(index + 1)
-		this.lenlist = index + 1
-	} else if index >= this.lenlist {
-		this.lenlist = index + 1
+func (l *List) set(index int, value interface{}) {
+	if index >= l.caplist {
+		l.expand(index + 1)
+		l.lenlist = index + 1
+	} else if index >= l.lenlist {
+		l.lenlist = index + 1
 	}
 
-	this.list[index] = value
+	l.list[index] = value
 }
 
-func (this *List) Insert(index int, value interface{}) Array {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.insert(index, value)
-	return this
+func (l *List) Insert(index int, value interface{}) Array {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.insert(index, value)
+	return l
 }
 
-func (this *List) insert(index int, value interface{}) {
-	if index >= this.lenlist {
-		this.set(index, value)
+func (l *List) insert(index int, value interface{}) {
+	if index >= l.lenlist {
+		l.set(index, value)
 	} else {
-		this.list = append(this.list[0:index], value, this.list[index:this.lenlist])
-		this.lenlist++
+		l.list = append(l.list[0:index], value, l.list[index:l.lenlist])
+		l.lenlist++
 	}
 }
 
-func (this *List) Pop() interface{} {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	return this.pop()
+func (l *List) Pop() interface{} {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.pop()
 }
 
-func (this *List) pop() (val interface{}) {
-	if this.lenlist > 0 {
-		val = this.list[this.lenlist]
-		this.list[this.lenlist] = nil
-		this.lenlist--
+func (l *List) pop() (val interface{}) {
+	if l.lenlist > 0 {
+		val = l.list[l.lenlist]
+		l.list[l.lenlist] = nil
+		l.lenlist--
 	}
 
 	return
 }
 
-func (this *List) RemoveAt(index int) interface{} {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	return this.removeat(index)
+func (l *List) RemoveAt(index int) interface{} {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.removeat(index)
 }
 
-func (this *List) removeat(index int) (val interface{}) {
-	if index >= 0 && this.lenlist > index {
-		val = this.list[index]
-		newlist := make([]interface{}, this.caplist)
-		copy(newlist, this.list[0:index])
-		if this.lenlist > index+1 {
-			copy(newlist[index:], this.list[index+1:this.lenlist])
+func (l *List) removeat(index int) (val interface{}) {
+	if index >= 0 && l.lenlist > index {
+		val = l.list[index]
+		newlist := make([]interface{}, l.caplist)
+		copy(newlist, l.list[0:index])
+		if l.lenlist > index+1 {
+			copy(newlist[index:], l.list[index+1:l.lenlist])
 		}
-		this.list = newlist
-		this.lenlist--
+		l.list = newlist
+		l.lenlist--
 	}
 	return
 }
 
-func (this *List) Remove(value interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (l *List) Remove(value interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	this.removeat(this.index(value))
+	l.removeat(l.index(value))
 }
 
-func (this *List) Clear() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.clear()
+func (l *List) Clear() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.clear()
 }
 
-func (this *List) clear() {
-	this.lenlist = 0
-	this.caplist = COMFORT_LEN
-	this.exlen = COMFORT_LEN
-	this.list = make([]interface{}, this.caplist)
+func (l *List) clear() {
+	l.lenlist = 0
+	l.caplist = COMFORT_LEN
+	l.exlen = COMFORT_LEN
+	l.list = make([]interface{}, l.caplist)
 }
 
-func (this *List) Swap(x int, y int) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.swap(x, y)
+func (l *List) Swap(x int, y int) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	l.swap(x, y)
 }
 
-func (this *List) swap(x int, y int) {
-	this.list[x], this.list[y] = this.list[y], this.list[x]
+func (l *List) swap(x int, y int) {
+	l.list[x], l.list[y] = l.list[y], l.list[x]
 }
 
-func (this *List) Reverse() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (l *List) Reverse() {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	backindex := this.lenlist - 1
-	for i, rlen := 0, int(this.lenlist/2); i < rlen; i++ {
-		this.swap(i, backindex)
+	backindex := l.lenlist - 1
+	for i, rlen := 0, int(l.lenlist/2); i < rlen; i++ {
+		l.swap(i, backindex)
 		backindex--
 	}
 }
 
-func (this *List) Less(x int, y int) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return Less(this.list[x], this.list[y])
+func (l *List) Less(x int, y int) bool {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	return Less(l.list[x], l.list[y])
 }
 
-func (this *List) Sort(less func(x interface{}, y interface{}) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (l *List) Sort(less func(x interface{}, y interface{}) bool) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	if less == nil {
 		less = Less
 	}
 
 	sortlist := &SortList{
-		list:    this.list,
-		lenlist: this.lenlist,
+		list:    l.list,
+		lenlist: l.lenlist,
 		lessf:   less,
 	}
 	sort.Sort(sortlist)
 }
 
-func (this *List) ToSlice() []interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	tmplist := make([]interface{}, this.lenlist)
-	copy(tmplist, this.list[0:this.lenlist])
+func (l *List) ToSlice() []interface{} {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
+	tmplist := make([]interface{}, l.lenlist)
+	copy(tmplist, l.list[0:l.lenlist])
 	return tmplist
 }
 
-func (this *List) ToSet() (set *Set) {
+func (l *List) ToSet() (set *Set) {
 	set = NewSet()
-	set.ExtendList(this)
+	set.ExtendList(l)
 	return
 }
 
-func (this *List) String() string {
-	return fmt.Sprintf("%v", this.list)
+func (l *List) String() string {
+	return fmt.Sprintf("%v", l.list)
 }
 
-func (this *List) Clone() *List {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	return this.clone()
+func (l *List) Clone() *List {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	return l.clone()
 }
 
-func (this *List) clone() *List {
-	clone := make([]interface{}, len(this.list))
-	copy(clone, this.list[0:this.lenlist])
+func (l *List) clone() *List {
+	clone := make([]interface{}, len(l.list))
+	copy(clone, l.list[0:l.lenlist])
 
 	return &List{
 		list:    clone,
 		mutex:   &sync.RWMutex{},
-		lenlist: this.lenlist,
-		caplist: this.caplist,
-		exlen:   this.exlen,
+		lenlist: l.lenlist,
+		caplist: l.caplist,
+		exlen:   l.exlen,
 	}
 }
 
-func (this *List) lock() {
-	this.mutex.Lock()
+func (l *List) lock() {
+	l.mutex.Lock()
 }
 
-func (this *List) unlock() {
-	this.mutex.Unlock()
+func (l *List) unlock() {
+	l.mutex.Unlock()
 }
 
-func (this *List) Transaction(f func(ExtendedArray) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (l *List) Transaction(f func(ExtendedArray) bool) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	clone := this.clone()
+	clone := l.clone()
 
 	if ok := f(clone); ok {
 		clone.lock()
 		defer clone.unlock()
-		if clone.caplist != this.caplist {
-			this.caplist = clone.caplist
-			this.list = make([]interface{}, clone.caplist)
+		if clone.caplist != l.caplist {
+			l.caplist = clone.caplist
+			l.list = make([]interface{}, clone.caplist)
 		}
-		this.lenlist = clone.lenlist
-		this.exlen = clone.exlen
-		copy(this.list, clone.list[0:clone.lenlist])
+		l.lenlist = clone.lenlist
+		l.exlen = clone.exlen
+		copy(l.list, clone.list[0:clone.lenlist])
 	}
 }
 
-func (this *List) Foreach(f func(int, interface{}) bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Foreach(f func(int, interface{}) bool) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	for i := 0; i < this.lenlist; i++ {
-		if !f(i, this.list[i]) {
+	for i := 0; i < l.lenlist; i++ {
+		if !f(i, l.list[i]) {
 			break
 		}
 	}
 }
 
-func (this *List) IsMatch(f func(interface{}) bool) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) IsMatch(f func(interface{}) bool) bool {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	for _, val := range this.list {
+	for _, val := range l.list {
 		if f(val) {
 			return true
 		}
@@ -420,58 +421,58 @@ func (this *List) IsMatch(f func(interface{}) bool) bool {
 	return false
 }
 
-func (this *List) Match(f func(interface{}) bool) (int, interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Match(f func(interface{}) bool) (int, interface{}) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	for i := 0; i < this.lenlist; i++ {
-		if f(this.list[i]) {
-			return i, this.list[i]
+	for i := 0; i < l.lenlist; i++ {
+		if f(l.list[i]) {
+			return i, l.list[i]
 		}
 	}
 
 	return -1, nil
 }
 
-func (this *List) Map(f func(interface{}) interface{}) ExtendedArray {
-	return ExtendedArray(this.MapList(f))
+func (l *List) Map(f func(interface{}) interface{}) ExtendedArray {
+	return ExtendedArray(l.MapList(f))
 }
 
-func (this *List) MapList(f func(interface{}) interface{}) (newlist *List) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) MapList(f func(interface{}) interface{}) (newlist *List) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	newlist = &List{
-		list:    make([]interface{}, this.caplist),
+		list:    make([]interface{}, l.caplist),
 		mutex:   &sync.RWMutex{},
-		lenlist: this.lenlist,
-		caplist: this.caplist,
-		exlen:   this.exlen,
+		lenlist: l.lenlist,
+		caplist: l.caplist,
+		exlen:   l.exlen,
 	}
 
-	for i := 0; i < this.lenlist; i++ {
-		newlist.list[i] = f(this.list[i])
+	for i := 0; i < l.lenlist; i++ {
+		newlist.list[i] = f(l.list[i])
 	}
 
 	return
 }
 
-func (this *List) Reduce(f func(interface{}, interface{}) interface{}, init interface{}) (value interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Reduce(f func(interface{}, interface{}) interface{}, init interface{}) (value interface{}) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	if this.lenlist > 0 {
+	if l.lenlist > 0 {
 		var i = 0
 
 		if init != nil {
 			value = init
 		} else {
-			value = this.list[0]
+			value = l.list[0]
 			i = 1
 		}
 
-		for ; i < this.lenlist; i++ {
-			value = f(value, this.list[i])
+		for ; i < l.lenlist; i++ {
+			value = f(value, l.list[i])
 		}
 	} else if init != nil {
 		value = init
@@ -480,20 +481,20 @@ func (this *List) Reduce(f func(interface{}, interface{}) interface{}, init inte
 	return
 }
 
-func (this *List) Filter(f func(interface{}) bool) ExtendedArray {
-	return ExtendedArray(this.FilterList(f))
+func (l *List) Filter(f func(interface{}) bool) ExtendedArray {
+	return ExtendedArray(l.FilterList(f))
 }
 
-func (this *List) FilterList(f func(interface{}) bool) (newlist *List) {
-	this.mutex.RLock()
+func (l *List) FilterList(f func(interface{}) bool) (newlist *List) {
+	l.mutex.RLock()
 	var (
-		exlen   = this.exlen
-		caplist = this.caplist
+		exlen   = l.exlen
+		caplist = l.caplist
 		tmplist = make([]interface{}, 0, caplist)
 	)
-	this.mutex.RUnlock()
+	l.mutex.RUnlock()
 
-	this.Foreach(func(_ int, value interface{}) bool {
+	l.Foreach(func(_ int, value interface{}) bool {
 		if f(value) {
 			tmplist = append(tmplist, value)
 		}
@@ -510,13 +511,13 @@ func (this *List) FilterList(f func(interface{}) bool) (newlist *List) {
 	}
 }
 
-func (this *List) Iterator() NumIterator {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (l *List) Iterator() NumIterator {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 	return &ListIterator{
-		list:  this.list,
-		len:   this.lenlist,
-		mutex: this.mutex,
+		list:  l.list,
+		len:   l.lenlist,
+		mutex: l.mutex,
 		curi:  -1,
 	}
 }
@@ -561,16 +562,16 @@ type SortList struct {
 	lessf   func(x interface{}, y interface{}) bool
 }
 
-func (this *SortList) Len() int {
-	return this.lenlist
+func (sl *SortList) Len() int {
+	return sl.lenlist
 }
 
-func (this *SortList) Less(x int, y int) bool {
-	return this.lessf(this.list[x], this.list[y])
+func (sl *SortList) Less(x int, y int) bool {
+	return sl.lessf(sl.list[x], sl.list[y])
 }
 
-func (this *SortList) Swap(x int, y int) {
-	this.list[x], this.list[y] = this.list[y], this.list[x]
+func (sl *SortList) Swap(x int, y int) {
+	sl.list[x], sl.list[y] = sl.list[y], sl.list[x]
 }
 
 // usage
@@ -587,50 +588,50 @@ type ListIterator struct {
 	curi   int
 }
 
-func (this *ListIterator) Next(val ...interface{}) (ok bool) {
+func (li *ListIterator) Next(val ...interface{}) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			ok = false
-			this.seek = 0
-			this.mutex.RLock()
-			this.len = len(this.list)
-			this.mutex.RUnlock()
+			li.seek = 0
+			li.mutex.RLock()
+			li.len = len(li.list)
+			li.mutex.RUnlock()
 		}
 	}()
 
-	if this.seek < this.len {
+	if li.seek < li.len {
 		ok = true
 
-		this.mutex.RLock()
-		defer this.mutex.RUnlock()
-		this.curi = this.seek
-		this.curval = this.list[this.seek]
+		li.mutex.RLock()
+		defer li.mutex.RUnlock()
+		li.curi = li.seek
+		li.curval = li.list[li.seek]
 
 		if lenval := len(val); lenval == 1 {
-			util.MapValue(val[0], this.curval)
+			util.MapValue(val[0], li.curval)
 		} else if lenval == 2 {
-			util.MapValue(val[0], this.curi)
-			util.MapValue(val[1], this.curval)
+			util.MapValue(val[0], li.curi)
+			util.MapValue(val[1], li.curval)
 		}
 
-		this.seek++
+		li.seek++
 	} else {
-		this.curi = -1
-		this.curval = nil
-		this.seek = 0
+		li.curi = -1
+		li.curval = nil
+		li.seek = 0
 	}
 
 	return
 }
 
-func (this *ListIterator) Get() (interface{}, interface{}) {
-	return this.curi, this.curval
+func (li *ListIterator) Get() (interface{}, interface{}) {
+	return li.curi, li.curval
 }
 
-func (this *ListIterator) GetI() (int, interface{}) {
-	return this.curi, this.curval
+func (li *ListIterator) GetI() (int, interface{}) {
+	return li.curi, li.curval
 }
 
-func (this *ListIterator) Reset() {
-	this.seek = 0
+func (li *ListIterator) Reset() {
+	li.seek = 0
 }

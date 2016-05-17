@@ -73,20 +73,20 @@ func NewSunnyPublisher(p string) *SunnyPublisher {
 
 // if template can't be found and there exists a publisher for the specific ext,
 // the publisher will be used to render and publish the content
-func (this *SunnyPublisher) AddRenderer(ext string, renderer Renderer) {
+func (p *SunnyPublisher) AddRenderer(ext string, renderer Renderer) {
 	// TODO: add mutex
-	this.renderer[ext] = renderer
+	p.renderer[ext] = renderer
 }
 
-func (this *SunnyPublisher) Publish(wr io.Writer, name string, data interface{}) {
+func (p *SunnyPublisher) Publish(wr io.Writer, name string, data interface{}) {
 	// TODO: use sync.Pool instead once GAE supports 1.3
 
 	// get cloned template from pool
 	// add contextual funcmap to the template
 
 	if strings.HasSuffix(name, ".html") {
-		ht, err := this.htmpl.Clone()
-		ht.Funcs(htemplate.FuncMap(this.fmap))
+		ht, err := p.htmpl.Clone()
+		ht.Funcs(htemplate.FuncMap(p.fmap))
 
 		if err == nil {
 			ht = ht.Lookup(name)
@@ -99,8 +99,8 @@ func (this *SunnyPublisher) Publish(wr io.Writer, name string, data interface{})
 			goto renderer
 		}
 	} else {
-		ht, err := this.tmpl.Clone()
-		ht.Funcs(template.FuncMap(this.fmap))
+		ht, err := p.tmpl.Clone()
+		ht.Funcs(template.FuncMap(p.fmap))
 
 		if err == nil {
 			if ht != nil {
@@ -117,7 +117,7 @@ func (this *SunnyPublisher) Publish(wr io.Writer, name string, data interface{})
 
 renderer:
 	ext := ".html"
-	b, err := this.renderer[ext](name, data)
+	b, err := p.renderer[ext](name, data)
 	if err == nil {
 		wr.Write(b)
 	}

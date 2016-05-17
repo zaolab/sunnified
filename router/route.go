@@ -2,15 +2,16 @@ package router
 
 import (
 	"errors"
-	"github.com/zaolab/sunnified/web"
 	"net/http"
 	"path"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/zaolab/sunnified/web"
 )
 
-var ErrInvalidHandler = errors.New("Invalid Handler")
+var ErrInvalidHandler = errors.New("invalid handler")
 
 const (
 	_ = iota
@@ -31,8 +32,8 @@ type ContextHTTPHandler struct {
 	web.ContextHandler
 }
 
-func (this ContextHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	this.ContextHandler.ServeContextHTTP(web.NewContext(w, r))
+func (ch ContextHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ch.ContextHandler.ServeContextHTTP(web.NewContext(w, r))
 }
 
 type ContextHTTPHandlerFunc func(*web.Context)
@@ -58,33 +59,33 @@ type SunnySwitch struct {
 	varnames []string
 }
 
-func (this *SunnySwitch) Handle(p string, h http.Handler) (ep EndPoint) {
-	ep = this.Route.Handle(p, h)
-	ep.PrependVarName(this.varnames...)
+func (ss *SunnySwitch) Handle(p string, h http.Handler) (ep EndPoint) {
+	ep = ss.Route.Handle(p, h)
+	ep.PrependVarName(ss.varnames...)
 	return
 }
 
-func (this *SunnySwitch) Switch(p string) (s Switch) {
-	s = this.Route.Switch(p)
-	s.PrependVarName(this.varnames...)
+func (ss *SunnySwitch) Switch(p string) (s Switch) {
+	s = ss.Route.Switch(p)
+	s.PrependVarName(ss.varnames...)
 	return
 }
 
-func (this *SunnySwitch) PrependVarName(names ...string) {
+func (ss *SunnySwitch) PrependVarName(names ...string) {
 	var lnames = len(names)
 	if lnames == 0 {
 		return
 	}
 
-	var varnames = make([]string, len(this.varnames)+lnames)
+	var varnames = make([]string, len(ss.varnames)+lnames)
 
 	copy(varnames[0:lnames], names)
 
 	if lvnames := len(varnames); lvnames > lnames {
-		copy(varnames[lnames:lvnames], this.varnames)
+		copy(varnames[lnames:lvnames], ss.varnames)
 	}
 
-	this.varnames = varnames
+	ss.varnames = varnames
 }
 
 type SunnyRoute struct {
@@ -97,8 +98,8 @@ type SunnyRoute struct {
 	softroute Route
 }
 
-func (this *SunnyRoute) Switch(p string) Switch {
-	varnames, r := this.BuildRoute(p)
+func (sr *SunnyRoute) Switch(p string) Switch {
+	varnames, r := sr.BuildRoute(p)
 	if len(r) > 0 {
 		return &SunnySwitch{
 			varnames: varnames[len(varnames)-1],
@@ -108,12 +109,12 @@ func (this *SunnyRoute) Switch(p string) Switch {
 	return nil
 }
 
-func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) {
+func (sr *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) {
 	p = strings.TrimSpace(p)
 	p = strings.TrimLeft(p, "/")
 
 	if p == "" {
-		rts = []Route{this}
+		rts = []Route{sr}
 		varnames = [][]string{[]string{}}
 		return
 	}
@@ -135,36 +136,32 @@ func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) 
 			curpathsplit := strings.SplitN(curpath, ":", 2)
 
 			switch strings.ToLower(curpathsplit[1]) {
-			case "int32":
-				fallthrough
-			case "int":
-				if rt = this.typeroute[MATCHTYPE_INT]; rt == nil {
+			case "int32", "int":
+				if rt = sr.typeroute[MATCHTYPE_INT]; rt == nil {
 					rt = NewSunnyRoute()
-					this.typeroute[MATCHTYPE_INT] = rt
+					sr.typeroute[MATCHTYPE_INT] = rt
 				}
 
 			case "int64":
-				if rt = this.typeroute[MATCHTYPE_INT64]; rt == nil {
+				if rt = sr.typeroute[MATCHTYPE_INT64]; rt == nil {
 					rt = NewSunnyRoute()
-					this.typeroute[MATCHTYPE_INT64] = rt
+					sr.typeroute[MATCHTYPE_INT64] = rt
 				}
 
-			case "float32":
-				fallthrough
-			case "float":
-				if rt = this.typeroute[MATCHTYPE_FLOAT]; rt == nil {
+			case "float32", "float":
+				if rt = sr.typeroute[MATCHTYPE_FLOAT]; rt == nil {
 					rt = NewSunnyRoute()
-					this.typeroute[MATCHTYPE_FLOAT] = rt
+					sr.typeroute[MATCHTYPE_FLOAT] = rt
 				}
 
 			case "float64":
-				if rt = this.typeroute[MATCHTYPE_FLOAT64]; rt == nil {
+				if rt = sr.typeroute[MATCHTYPE_FLOAT64]; rt == nil {
 					rt = NewSunnyRoute()
-					this.typeroute[MATCHTYPE_FLOAT64] = rt
+					sr.typeroute[MATCHTYPE_FLOAT64] = rt
 				}
 
 			default:
-				for re, rr := range this.regxroute {
+				for re, rr := range sr.regxroute {
 					if re.String() == curpathsplit[1] {
 						rt = rr
 						break
@@ -180,15 +177,15 @@ func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) 
 					if regexstr[len(regexstr)-1] != '$' {
 						regexstr = regexstr + "$"
 					}
-					this.regxroute[regexp.MustCompile(regexstr)] = rt
+					sr.regxroute[regexp.MustCompile(regexstr)] = rt
 				}
 			}
 
 			varname = strings.TrimSpace(curpathsplit[0])
 		} else {
-			if rt = this.softroute; rt == nil {
+			if rt = sr.softroute; rt == nil {
 				rt = NewSunnyRoute()
-				this.softroute = rt
+				sr.softroute = rt
 			}
 		}
 
@@ -201,9 +198,9 @@ func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) 
 			varname = "_"
 		}
 	} else {
-		if rt, exists = this.hardroute[pathsplit[0]]; !exists {
+		if rt, exists = sr.hardroute[pathsplit[0]]; !exists {
 			rt = NewSunnyRoute()
-			this.hardroute[pathsplit[0]] = rt
+			sr.hardroute[pathsplit[0]] = rt
 		}
 	}
 
@@ -224,7 +221,7 @@ func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) 
 
 	if addroute {
 		trts := make([]Route, len(rts)+1)
-		trts[0] = this
+		trts[0] = sr
 		copy(trts[1:len(trts)], rts)
 		rts = trts
 
@@ -237,12 +234,12 @@ func (this *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) 
 	return
 }
 
-func (this *SunnyRoute) HasRoute(p string) bool {
-	ep, _, _ := this.FindEndPoint(this.SplitPath(p), make([]string, 0, 3))
+func (sr *SunnyRoute) HasRoute(p string) bool {
+	ep, _, _ := sr.FindEndPoint(sr.SplitPath(p), make([]string, 0, 3))
 	return ep != nil
 }
 
-func (this *SunnyRoute) SplitPath(p string) (pathsplit []string) {
+func (sr *SunnyRoute) SplitPath(p string) (pathsplit []string) {
 	pathsplit = strings.Split(p, "/")
 	lpath := len(pathsplit)
 	if lpath > 0 && pathsplit[0] == "" {
@@ -255,27 +252,27 @@ func (this *SunnyRoute) SplitPath(p string) (pathsplit []string) {
 	return
 }
 
-func (this *SunnyRoute) Handle(p string, h interface{}, method ...string) (ep EndPoint) {
+func (sr *SunnyRoute) Handle(p string, h interface{}, method ...string) (ep EndPoint) {
 	p = strings.TrimSpace(p)
 
 	if p == "" {
-		if this.hardend != nil {
-			ep = this.hardend
+		if sr.hardend != nil {
+			ep = sr.hardend
 		} else {
 			ep = &SunnyEndPoint{}
-			this.hardend = ep
+			sr.hardend = ep
 		}
 		ep.SetHandler(h, method...)
 	} else if p == "/" {
-		if this.softend != nil {
-			ep = this.softend
+		if sr.softend != nil {
+			ep = sr.softend
 		} else {
 			ep = &SunnyEndPoint{}
-			this.softend = ep
+			sr.softend = ep
 		}
 		ep.SetHandler(h, method...)
 	} else {
-		varnames, rts := this.BuildRoute(p)
+		varnames, rts := sr.BuildRoute(p)
 
 		if len(rts) == 1 {
 			rt := rts[0]
@@ -304,7 +301,7 @@ func (this *SunnyRoute) Handle(p string, h interface{}, method ...string) (ep En
 	return
 }
 
-func (this *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []string, []string) {
+func (sr *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []string, []string) {
 	var lpath = len(p)
 
 	if data == nil {
@@ -312,10 +309,10 @@ func (this *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []str
 	}
 
 	if lpath <= 0 {
-		if this.hardend != nil {
-			return this.hardend, p, data
+		if sr.hardend != nil {
+			return sr.hardend, p, data
 		} else {
-			return this.softend, p, data
+			return sr.softend, p, data
 		}
 	}
 
@@ -328,15 +325,15 @@ func (this *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []str
 		noext = strings.TrimSuffix(curpath, path.Ext(curpath))
 	}
 
-	if route, exists := this.hardroute[curpath]; exists {
+	if route, exists := sr.hardroute[curpath]; exists {
 		return route.FindEndPoint(p, data)
 	} else if noext != "" {
-		if route, exists := this.hardroute[curpath]; exists {
+		if route, exists := sr.hardroute[curpath]; exists {
 			return route.FindEndPoint(p, data)
 		}
 	}
 
-	for regx, route := range this.regxroute {
+	for regx, route := range sr.regxroute {
 		if noext != "" && regx.MatchString(noext) {
 			return nextEndPoint(route, noext, p, data)
 		} else if regx.MatchString(curpath) {
@@ -349,7 +346,7 @@ func (this *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []str
 		typepath = curpath
 	}
 
-	for rtype, route := range this.typeroute {
+	for rtype, route := range sr.typeroute {
 		if route == nil {
 			continue
 		}
@@ -373,29 +370,29 @@ func (this *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []str
 		}
 	}
 
-	if this.softroute != nil {
-		return nextEndPoint(this.softroute, typepath, p, data)
+	if sr.softroute != nil {
+		return nextEndPoint(sr.softroute, typepath, p, data)
 	}
 
 	p = fullp
-	return this.softend, p, data
+	return sr.softend, p, data
 }
 
-func (this *SunnyRoute) FindRequestedEndPoint(p string, r *http.Request) *RequestedEndPoint {
-	pathsplit := this.SplitPath(p)
-	ep, upath, data := this.FindEndPoint(pathsplit, make([]string, 0, 3))
+func (sr *SunnyRoute) FindRequestedEndPoint(p string, r *http.Request) *RequestedEndPoint {
+	pathsplit := sr.SplitPath(p)
+	ep, upath, data := sr.FindEndPoint(pathsplit, make([]string, 0, 3))
 	if ep != nil {
 		return ep.GetRequestedEndPoint(r, upath, data)
 	}
 	return nil
 }
 
-func (this *SunnyRoute) HardEndPoint() EndPoint {
-	return this.hardend
+func (sr *SunnyRoute) HardEndPoint() EndPoint {
+	return sr.hardend
 }
 
-func (this *SunnyRoute) SoftEndPoint() EndPoint {
-	return this.softend
+func (sr *SunnyRoute) SoftEndPoint() EndPoint {
+	return sr.softend
 }
 
 type SunnyEndPoint struct {
@@ -409,28 +406,28 @@ type SunnyEndPoint struct {
 	varnames []string
 }
 
-func (this *SunnyEndPoint) PrependVarName(names ...string) {
+func (se *SunnyEndPoint) PrependVarName(names ...string) {
 	var lnames = len(names)
 	if lnames == 0 {
 		return
 	}
 
-	var varnames = make([]string, len(this.varnames)+lnames)
+	var varnames = make([]string, len(se.varnames)+lnames)
 
 	copy(varnames[0:lnames], names)
 
 	if lvnames := len(varnames); lvnames > lnames {
-		copy(varnames[lnames:lvnames], this.varnames)
+		copy(varnames[lnames:lvnames], se.varnames)
 	}
 
-	this.varnames = varnames
+	se.varnames = varnames
 }
 
-func (this *SunnyEndPoint) AppendVarName(name ...string) {
-	this.varnames = append(this.varnames, name...)
+func (se *SunnyEndPoint) AppendVarName(name ...string) {
+	se.varnames = append(se.varnames, name...)
 }
 
-func (this *SunnyEndPoint) SetHandler(handler interface{}, method ...string) error {
+func (se *SunnyEndPoint) SetHandler(handler interface{}, method ...string) error {
 	var (
 		h  http.Handler
 		ch web.ContextHandler
@@ -452,26 +449,26 @@ func (this *SunnyEndPoint) SetHandler(handler interface{}, method ...string) err
 	}
 
 	if len(method) == 0 {
-		this.get = h
-		this.post = h
-		this.put = h
-		this.patch = h
-		this.delete = h
+		se.get = h
+		se.post = h
+		se.put = h
+		se.patch = h
+		se.delete = h
 	} else {
 		for _, m := range method {
 			switch strings.ToUpper(m) {
 			case "GET":
-				this.get = h
+				se.get = h
 			case "POST":
-				this.post = h
+				se.post = h
 			case "PUT":
-				this.put = h
+				se.put = h
 			case "PATCH":
-				this.patch = h
+				se.patch = h
 			case "DELETE":
-				this.delete = h
+				se.delete = h
 			case "HEAD":
-				this.head = h
+				se.head = h
 			}
 		}
 	}
@@ -479,56 +476,56 @@ func (this *SunnyEndPoint) SetHandler(handler interface{}, method ...string) err
 	return nil
 }
 
-func (this *SunnyEndPoint) Handlers() map[string]http.Handler {
+func (se *SunnyEndPoint) Handlers() map[string]http.Handler {
 	return map[string]http.Handler{
-		"GET":    this.get,
-		"POST":   this.post,
-		"PUT":    this.put,
-		"PATCH":  this.patch,
-		"DELETE": this.delete,
-		"HEAD":   this.HeadHandler(),
+		"GET":    se.get,
+		"POST":   se.post,
+		"PUT":    se.put,
+		"PATCH":  se.patch,
+		"DELETE": se.delete,
+		"HEAD":   se.HeadHandler(),
 	}
 }
 
-func (this *SunnyEndPoint) GetHandler() http.Handler {
-	return this.get
+func (se *SunnyEndPoint) GetHandler() http.Handler {
+	return se.get
 }
 
-func (this *SunnyEndPoint) PostHandler() http.Handler {
-	return this.post
+func (se *SunnyEndPoint) PostHandler() http.Handler {
+	return se.post
 }
 
-func (this *SunnyEndPoint) PutHandler() http.Handler {
-	return this.put
+func (se *SunnyEndPoint) PutHandler() http.Handler {
+	return se.put
 }
 
-func (this *SunnyEndPoint) PatchHandler() http.Handler {
-	return this.patch
+func (se *SunnyEndPoint) PatchHandler() http.Handler {
+	return se.patch
 }
 
-func (this *SunnyEndPoint) DeleteHandler() http.Handler {
-	return this.delete
+func (se *SunnyEndPoint) DeleteHandler() http.Handler {
+	return se.delete
 }
 
-func (this *SunnyEndPoint) HeadHandler() (head http.Handler) {
-	if head = this.head; head == nil && this.get != nil {
-		head = this.get
+func (se *SunnyEndPoint) HeadHandler() (head http.Handler) {
+	if head = se.head; head == nil && se.get != nil {
+		head = se.get
 	}
 	return
 }
 
-func (this *SunnyEndPoint) Handler(method string) http.Handler {
+func (se *SunnyEndPoint) Handler(method string) http.Handler {
 	method = strings.ToUpper(method)
-	return this.Handlers()[method]
+	return se.Handlers()[method]
 }
 
-func (this *SunnyEndPoint) GetRequestedEndPoint(r *http.Request, upath []string, data []string) *RequestedEndPoint {
-	handlers := this.Handlers()
+func (se *SunnyEndPoint) GetRequestedEndPoint(r *http.Request, upath []string, data []string) *RequestedEndPoint {
+	handlers := se.Handlers()
 	if h, exists := handlers[r.Method]; exists && h != nil {
 		var pdata = make(map[string]string)
 		for i, value := range data {
-			if this.varnames[i] != "_" {
-				pdata[this.varnames[i]] = value
+			if se.varnames[i] != "_" {
+				pdata[se.varnames[i]] = value
 			}
 		}
 
@@ -548,16 +545,16 @@ func (this *SunnyEndPoint) GetRequestedEndPoint(r *http.Request, upath []string,
 			PData:    web.PData(pdata),
 			Method:   r.Method,
 			Handler:  h,
-			EndPoint: this,
+			EndPoint: se,
 		}
 	}
 
 	return nil
 }
 
-func (this *SunnyEndPoint) Methods() (methods []string) {
+func (se *SunnyEndPoint) Methods() (methods []string) {
 	methods = make([]string, 0, 6)
-	handlers := this.Handlers()
+	handlers := se.Handlers()
 
 	for meth, h := range handlers {
 		if h != nil {

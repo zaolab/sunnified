@@ -28,10 +28,10 @@ type HTMLHeadMiddleWare struct {
 	scriptbatch    map[string][]string
 }
 
-func (this *HTMLHeadMiddleWare) Body(ctxt *web.Context) {
+func (mw *HTMLHeadMiddleWare) Body(ctxt *web.Context) {
 	head := &HTMLHead{
-		cssbatch:    this.cssbatch,
-		scriptbatch: this.scriptbatch,
+		cssbatch:    mw.cssbatch,
+		scriptbatch: mw.scriptbatch,
 		css:         make([]string, 0, 1),
 		scripts:     make([]string, 0, 1),
 		addedcss:    make([]string, 0, 1),
@@ -40,18 +40,18 @@ func (this *HTMLHeadMiddleWare) Body(ctxt *web.Context) {
 	ctxt.SetResource("htmlhead", head)
 	ctxt.SetTitle_ = head.SetTitle
 
-	if this.defaultTitle != "" {
-		head.SetTitle(this.defaultTitle)
+	if mw.defaultTitle != "" {
+		head.SetTitle(mw.defaultTitle)
 	}
-	if this.defaultCss != nil && len(this.defaultCss) > 0 {
-		head.AddCss(this.defaultCss...)
+	if mw.defaultCss != nil && len(mw.defaultCss) > 0 {
+		head.AddCss(mw.defaultCss...)
 	}
-	if this.defaultScripts != nil && len(this.defaultScripts) > 0 {
-		head.AddScript(this.defaultScripts...)
+	if mw.defaultScripts != nil && len(mw.defaultScripts) > 0 {
+		head.AddScript(mw.defaultScripts...)
 	}
 }
 
-func (this *HTMLHeadMiddleWare) View(ctxt *web.Context, vw mvc.View) {
+func (mw *HTMLHeadMiddleWare) View(ctxt *web.Context, vw mvc.View) {
 	var head *HTMLHead
 	if dview, ok := vw.(mvc.DataView); ok && ctxt.MapResourceValue("htmlhead", &head) == nil && head != nil {
 		dview.SetData("Htmlhead_Title", head.Title())
@@ -60,31 +60,31 @@ func (this *HTMLHeadMiddleWare) View(ctxt *web.Context, vw mvc.View) {
 	}
 }
 
-func (this *HTMLHeadMiddleWare) AddDefaultCss(css ...string) {
-	this.defaultCss = append(this.defaultCss, css...)
+func (mw *HTMLHeadMiddleWare) AddDefaultCss(css ...string) {
+	mw.defaultCss = append(mw.defaultCss, css...)
 }
 
-func (this *HTMLHeadMiddleWare) AddDefaultScript(script ...string) {
-	this.defaultScripts = append(this.defaultScripts, script...)
+func (mw *HTMLHeadMiddleWare) AddDefaultScript(script ...string) {
+	mw.defaultScripts = append(mw.defaultScripts, script...)
 }
 
-func (this *HTMLHeadMiddleWare) CreateCssBatch(name string, css ...string) {
-	if arr, exists := this.cssbatch[name]; exists {
-		this.cssbatch[name] = append(arr, css...)
+func (mw *HTMLHeadMiddleWare) CreateCssBatch(name string, css ...string) {
+	if arr, exists := mw.cssbatch[name]; exists {
+		mw.cssbatch[name] = append(arr, css...)
 	} else {
 		newarr := make([]string, len(css))
 		copy(newarr, css)
-		this.cssbatch[name] = newarr
+		mw.cssbatch[name] = newarr
 	}
 }
 
-func (this *HTMLHeadMiddleWare) CreateScriptBatch(name string, script ...string) {
-	if arr, exists := this.scriptbatch[name]; exists {
-		this.scriptbatch[name] = append(arr, script...)
+func (mw *HTMLHeadMiddleWare) CreateScriptBatch(name string, script ...string) {
+	if arr, exists := mw.scriptbatch[name]; exists {
+		mw.scriptbatch[name] = append(arr, script...)
 	} else {
 		newarr := make([]string, len(script))
 		copy(newarr, script)
-		this.scriptbatch[name] = newarr
+		mw.scriptbatch[name] = newarr
 	}
 }
 
@@ -98,40 +98,40 @@ type HTMLHead struct {
 	addedscript []string
 }
 
-func (this *HTMLHead) Title() string {
-	return this.title
+func (h *HTMLHead) Title() string {
+	return h.title
 }
 
-func (this *HTMLHead) Css() []string {
-	return this.css
+func (h *HTMLHead) Css() []string {
+	return h.css
 }
 
-func (this *HTMLHead) Scripts() []string {
-	return this.scripts
+func (h *HTMLHead) Scripts() []string {
+	return h.scripts
 }
 
-func (this *HTMLHead) SetTitle(title string) {
-	this.title = title
+func (h *HTMLHead) SetTitle(title string) {
+	h.title = title
 }
 
-func (this *HTMLHead) AddCss(css ...string) {
-	this.css = append(this.css, css...)
+func (h *HTMLHead) AddCss(css ...string) {
+	h.css = append(h.css, css...)
 }
 
-func (this *HTMLHead) AddScript(script ...string) {
-	this.scripts = append(this.scripts, script...)
+func (h *HTMLHead) AddScript(script ...string) {
+	h.scripts = append(h.scripts, script...)
 }
 
-func (this *HTMLHead) AddCssBatch(name string) {
-	if arr, exists := this.cssbatch[name]; exists && !validate.IsIn(name, this.addedcss...) {
-		this.AddCss(arr...)
-		this.addedcss = append(this.addedcss, name)
+func (h *HTMLHead) AddCssBatch(name string) {
+	if arr, exists := h.cssbatch[name]; exists && !validate.IsIn(name, h.addedcss...) {
+		h.AddCss(arr...)
+		h.addedcss = append(h.addedcss, name)
 	}
 }
 
-func (this *HTMLHead) AddScriptBatch(name string) {
-	if arr, exists := this.scriptbatch[name]; exists && !validate.IsIn(name, this.addedscript...) {
-		this.AddScript(arr...)
-		this.addedscript = append(this.addedscript, name)
+func (h *HTMLHead) AddScriptBatch(name string) {
+	if arr, exists := h.scriptbatch[name]; exists && !validate.IsIn(name, h.addedscript...) {
+		h.AddScript(arr...)
+		h.addedscript = append(h.addedscript, name)
 	}
 }

@@ -3,13 +3,14 @@ package view
 import (
 	"bytes"
 	"fmt"
-	"github.com/zaolab/sunnified/web"
 	"io"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"time"
+
+	"github.com/zaolab/sunnified/web"
 )
 
 type FileDownloadView struct {
@@ -18,21 +19,21 @@ type FileDownloadView struct {
 	FileName string
 }
 
-func (this *FileDownloadView) ContentType(ctxt *web.Context) string {
-	if this.CType == "" {
-		this.CType = mime.TypeByExtension(path.Ext(this.FilePath))
-		if this.CType == "" {
-			this.CType = "application/octet-stream"
+func (fv *FileDownloadView) ContentType(ctxt *web.Context) string {
+	if fv.CType == "" {
+		fv.CType = mime.TypeByExtension(path.Ext(fv.FilePath))
+		if fv.CType == "" {
+			fv.CType = "application/octet-stream"
 		}
 	}
-	return this.CType
+	return fv.CType
 }
 
-func (this *FileDownloadView) Render(ctxt *web.Context) ([]byte, error) {
+func (fv *FileDownloadView) Render(ctxt *web.Context) ([]byte, error) {
 	var file *os.File
 	var err error
 
-	if file, err = os.Open(this.FilePath); err == nil {
+	if file, err = os.Open(fv.FilePath); err == nil {
 		defer file.Close()
 		var bsize int64 = 1000
 
@@ -47,28 +48,28 @@ func (this *FileDownloadView) Render(ctxt *web.Context) ([]byte, error) {
 	return nil, err
 }
 
-func (this *FileDownloadView) RenderString(ctxt *web.Context) (string, error) {
-	b, err := this.Render(ctxt)
+func (fv *FileDownloadView) RenderString(ctxt *web.Context) (string, error) {
+	b, err := fv.Render(ctxt)
 	if err == nil {
 		return string(b), nil
 	}
 	return "", err
 }
 
-func (this *FileDownloadView) Publish(ctxt *web.Context) (err error) {
+func (fv *FileDownloadView) Publish(ctxt *web.Context) (err error) {
 	var file *os.File
 
-	if file, err = os.Open(this.FilePath); err == nil {
+	if file, err = os.Open(fv.FilePath); err == nil {
 		defer file.Close()
 
-		fbase := path.Base(this.FilePath)
-		if this.FileName == "" {
-			this.FileName = fbase
+		fbase := path.Base(fv.FilePath)
+		if fv.FileName == "" {
+			fv.FileName = fbase
 		}
 
 		header := ctxt.Response.Header()
-		header.Set("Content-Type", this.ContentType(ctxt))
-		header.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, this.FileName))
+		header.Set("Content-Type", fv.ContentType(ctxt))
+		header.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fv.FileName))
 
 		var modtime time.Time
 		if stat, err := file.Stat(); err == nil {

@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"github.com/zaolab/sunnified/web"
 	"net/http"
 	"reflect"
+
+	"github.com/zaolab/sunnified/web"
 )
 
 type ControllerType int
@@ -89,25 +90,25 @@ type ControllerMeta struct {
 	ResultStyle
 }
 
-func (this ActionMap) Add(name string, am *ActionMeta) {
-	if _, exists := this[name]; !exists {
-		this[name] = make(map[ReqMethod]*ActionMeta)
+func (a ActionMap) Add(name string, am *ActionMeta) {
+	if _, exists := a[name]; !exists {
+		a[name] = make(map[ReqMethod]*ActionMeta)
 	}
 	for i := uint16(0); i < 4; i++ {
 		reqtype := ReqMethod(1 << i)
 		if (am.reqmeth & reqtype) == reqtype {
-			this[name][reqtype] = am
+			a[name][reqtype] = am
 		}
 	}
 }
 
-func (this ActionMap) HasAction(name string) bool {
-	_, exists := this[name]
+func (a ActionMap) HasAction(name string) bool {
+	_, exists := a[name]
 	return exists
 }
 
-func (this ActionMap) Get(name string, reqtype ReqMethod) *ActionMeta {
-	if actions, exists := this[name]; exists {
+func (a ActionMap) Get(name string, reqtype ReqMethod) *ActionMeta {
+	if actions, exists := a[name]; exists {
 		if action, exists := actions[reqtype]; exists {
 			return action
 		}
@@ -115,8 +116,8 @@ func (this ActionMap) Get(name string, reqtype ReqMethod) *ActionMeta {
 	return nil
 }
 
-func (this ActionMap) GetReqMeth(name string) (rm ReqMethod) {
-	if actions, exists := this[name]; exists {
+func (a ActionMap) GetReqMeth(name string) (rm ReqMethod) {
+	if actions, exists := a[name]; exists {
 		for rmeth, _ := range actions {
 			rm = rm | rmeth
 		}
@@ -124,8 +125,8 @@ func (this ActionMap) GetReqMeth(name string) (rm ReqMethod) {
 	return
 }
 
-func (this ActionMap) GetReqMethList(name string) (rml []string) {
-	if actions, exists := this[name]; exists {
+func (a ActionMap) GetReqMethList(name string) (rml []string) {
+	if actions, exists := a[name]; exists {
 		rml = make([]string, 0, len(actions))
 
 		for rmeth, _ := range actions {
@@ -153,63 +154,63 @@ func (this ActionMap) GetReqMethList(name string) (rml []string) {
 	return
 }
 
-func (this ActionMap) Delete(name string) {
-	delete(this, name)
+func (a ActionMap) Delete(name string) {
+	delete(a, name)
 }
 
-func (this ActionMap) Remove(name string, reqtype ReqMethod) {
-	if actions, exists := this[name]; exists {
+func (a ActionMap) Remove(name string, reqtype ReqMethod) {
+	if actions, exists := a[name]; exists {
 		delete(actions, reqtype)
 	}
 }
 
-func (this ActionMap) Count() int {
-	return len(this)
+func (a ActionMap) Count() int {
+	return len(a)
 }
 
-func (this *ControllerMeta) Action(name string, reqtype ReqMethod) *ActionMeta {
-	return this.meths.Get(name, reqtype)
+func (cm *ControllerMeta) Action(name string, reqtype ReqMethod) *ActionMeta {
+	return cm.meths.Get(name, reqtype)
 }
 
-func (this ControllerMeta) ActionFromRequest(name string, ctxt *web.Context) *ActionMeta {
-	return this.Action(name, GetXReqMethod(ctxt))
+func (cm ControllerMeta) ActionFromRequest(name string, ctxt *web.Context) *ActionMeta {
+	return cm.Action(name, GetXReqMethod(ctxt))
 }
 
-func (this ControllerMeta) ActionAvailableMethods(name string) ReqMethod {
-	return this.meths.GetReqMeth(name)
+func (cm ControllerMeta) ActionAvailableMethods(name string) ReqMethod {
+	return cm.meths.GetReqMeth(name)
 }
 
-func (this ControllerMeta) ActionAvailableMethodsList(name string) []string {
-	return this.meths.GetReqMethList(name)
+func (cm ControllerMeta) ActionAvailableMethodsList(name string) []string {
+	return cm.meths.GetReqMethList(name)
 }
 
-func (this *ControllerMeta) New() reflect.Value {
-	return reflect.New(this.rtype)
+func (cm *ControllerMeta) New() reflect.Value {
+	return reflect.New(cm.rtype)
 }
 
-func (this *ControllerMeta) HasActionMethod(name string, reqtype ReqMethod) bool {
-	return this.Action(name, reqtype) != nil
+func (cm *ControllerMeta) HasActionMethod(name string, reqtype ReqMethod) bool {
+	return cm.Action(name, reqtype) != nil
 }
 
-func (this *ControllerMeta) HasAction(name string) bool {
-	return this.meths.HasAction(name)
+func (cm *ControllerMeta) HasAction(name string) bool {
+	return cm.meths.HasAction(name)
 }
 
-func (this *ControllerMeta) Name() string {
-	return this.name
+func (cm *ControllerMeta) Name() string {
+	return cm.name
 }
 
-func (this *ControllerMeta) Module() string {
-	return this.modname
+func (cm *ControllerMeta) Module() string {
+	return cm.modname
 }
 
-func (this *ControllerMeta) RType() reflect.Type {
-	return this.rtype
+func (cm *ControllerMeta) RType() reflect.Type {
+	return cm.rtype
 }
 
-func (this *ControllerMeta) Meths() ActionMap {
+func (cm *ControllerMeta) Meths() ActionMap {
 	meths := make(ActionMap)
-	for k, v := range this.meths {
+	for k, v := range cm.meths {
 		reqmeths := make(map[ReqMethod]*ActionMeta)
 		for k2, v2 := range v {
 			reqmeths[k2] = v2
@@ -219,22 +220,22 @@ func (this *ControllerMeta) Meths() ActionMap {
 	return meths
 }
 
-func (this *ControllerMeta) ReqMeth() ReqMethod {
-	return this.reqmeth
+func (cm *ControllerMeta) ReqMeth() ReqMethod {
+	return cm.reqmeth
 }
 
-func (this *ControllerMeta) Args() []*ArgMeta {
-	out := make([]*ArgMeta, len(this.args))
-	copy(out, this.args)
+func (cm *ControllerMeta) Args() []*ArgMeta {
+	out := make([]*ArgMeta, len(cm.args))
+	copy(out, cm.args)
 	return out
 }
 
-func (this *ControllerMeta) Fields() []*FieldMeta {
-	out := make([]*FieldMeta, len(this.fields))
-	copy(out, this.fields)
+func (cm *ControllerMeta) Fields() []*FieldMeta {
+	out := make([]*FieldMeta, len(cm.fields))
+	copy(out, cm.fields)
 	return out
 }
 
-func (this *ControllerMeta) T() ControllerType {
-	return this.t
+func (cm *ControllerMeta) T() ControllerType {
+	return cm.t
 }

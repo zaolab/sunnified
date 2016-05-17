@@ -2,10 +2,11 @@ package mware
 
 import (
 	"errors"
+	"sync"
+
 	"github.com/zaolab/sunnified/mvc"
 	"github.com/zaolab/sunnified/mvc/controller"
 	"github.com/zaolab/sunnified/web"
-	"sync"
 )
 
 type MiddleWareConstructor func() MiddleWare
@@ -52,20 +53,20 @@ type MiddleWare interface {
 type BaseMiddleWare struct {
 }
 
-func (this BaseMiddleWare) Request(ctxt *web.Context) {
+func (mw BaseMiddleWare) Request(ctxt *web.Context) {
 }
 
-func (this BaseMiddleWare) Body(ctxt *web.Context) {
+func (mw BaseMiddleWare) Body(ctxt *web.Context) {
 }
 
-func (this BaseMiddleWare) Controller(ctxt *web.Context, cm *controller.ControlManager) {
+func (mw BaseMiddleWare) Controller(ctxt *web.Context, cm *controller.ControlManager) {
 }
 
-func (this BaseMiddleWare) View(ctxt *web.Context, vw mvc.View) {
+func (mw BaseMiddleWare) View(ctxt *web.Context, vw mvc.View) {
 }
 
-func (this BaseMiddleWare) Response(ctxt *web.Context) {
+func (mw BaseMiddleWare) Response(ctxt *web.Context) {
 }
 
-func (this BaseMiddleWare) Cleanup(ctxt *web.Context) {
+func (mw BaseMiddleWare) Cleanup(ctxt *web.Context) {
 }

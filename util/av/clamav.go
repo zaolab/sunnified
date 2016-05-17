@@ -34,13 +34,13 @@ type ClamAVScanner struct {
 	address string
 }
 
-func (this ClamAVScanner) ScanFile(filename string) (res AVResult, err error) {
+func (av ClamAVScanner) ScanFile(filename string) (res AVResult, err error) {
 	var (
 		conn    net.Conn
 		absname string
 	)
 
-	if conn, err = net.Dial(this.network, this.address); err != nil {
+	if conn, err = net.Dial(av.network, av.address); err != nil {
 		return
 	}
 	defer conn.Close()
@@ -63,13 +63,13 @@ func (this ClamAVScanner) ScanFile(filename string) (res AVResult, err error) {
 	return
 }
 
-func (this ClamAVScanner) ScanBytes(d []byte) (res AVResult, err error) {
+func (av ClamAVScanner) ScanBytes(d []byte) (res AVResult, err error) {
 	var (
 		conn net.Conn
 		ld   int
 	)
 
-	if conn, err = net.Dial(this.network, this.address); err != nil {
+	if conn, err = net.Dial(av.network, av.address); err != nil {
 		return
 	}
 	defer conn.Close()
@@ -106,13 +106,13 @@ func (this ClamAVScanner) ScanBytes(d []byte) (res AVResult, err error) {
 	return
 }
 
-func (this ClamAVScanner) ScanStream(r io.Reader) (res AVResult, err error) {
+func (av ClamAVScanner) ScanStream(r io.Reader) (res AVResult, err error) {
 	var (
 		conn net.Conn
 		buff = make([]byte, clamInstreamBufSize)
 	)
 
-	if conn, err = net.Dial(this.network, this.address); err != nil {
+	if conn, err = net.Dial(av.network, av.address); err != nil {
 		return
 	}
 	defer conn.Close()
@@ -143,11 +143,11 @@ func (this ClamAVScanner) ScanStream(r io.Reader) (res AVResult, err error) {
 	return
 }
 
-func (this ClamAVScanner) ScanFileAsync(filename string) (c <-chan AVResultErr) {
+func (av ClamAVScanner) ScanFileAsync(filename string) (c <-chan AVResultErr) {
 	c = make(chan AVResultErr, 1)
 
 	go func() {
-		res, err := this.ScanFile(filename)
+		res, err := av.ScanFile(filename)
 		c <- AVResultErr{
 			AVResult: res,
 			Error:    err,
@@ -157,11 +157,11 @@ func (this ClamAVScanner) ScanFileAsync(filename string) (c <-chan AVResultErr) 
 	return c
 }
 
-func (this ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan AVResultErr) {
+func (av ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan AVResultErr) {
 	c = make(chan AVResultErr, 1)
 
 	go func() {
-		res, err := this.ScanBytes(d)
+		res, err := av.ScanBytes(d)
 		c <- AVResultErr{
 			AVResult: res,
 			Error:    err,
@@ -171,11 +171,11 @@ func (this ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan AVResultErr) {
 	return c
 }
 
-func (this ClamAVScanner) ScanStreamAsync(r io.Reader) (c <-chan AVResultErr) {
+func (av ClamAVScanner) ScanStreamAsync(r io.Reader) (c <-chan AVResultErr) {
 	c = make(chan AVResultErr, 1)
 
 	go func() {
-		res, err := this.ScanStream(r)
+		res, err := av.ScanStream(r)
 		c <- AVResultErr{
 			AVResult: res,
 			Error:    err,

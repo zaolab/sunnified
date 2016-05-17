@@ -2,11 +2,12 @@ package resp
 
 import (
 	"compress/gzip"
-	"github.com/zaolab/sunnified/util/validate"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/zaolab/sunnified/util/validate"
 )
 
 type GzipResponseWriter struct {
@@ -14,18 +15,18 @@ type GzipResponseWriter struct {
 	gzip *gzip.Writer
 }
 
-func (this *GzipResponseWriter) Write(data []byte) (n int, err error) {
-	if this.gzip != nil {
-		defer this.gzip.Flush()
-		return this.gzip.Write(data)
+func (gw *GzipResponseWriter) Write(data []byte) (n int, err error) {
+	if gw.gzip != nil {
+		defer gw.gzip.Flush()
+		return gw.gzip.Write(data)
 	}
-	return this.ResponseWriter.Write(data)
+	return gw.ResponseWriter.Write(data)
 }
 
 // GzipResponseWriter must be manually closed!
-func (this *GzipResponseWriter) Close() {
-	if this.gzip != nil {
-		this.gzip.Close()
+func (gw *GzipResponseWriter) Close() {
+	if gw.gzip != nil {
+		gw.gzip.Close()
 	}
 }
 

@@ -4,7 +4,6 @@ package mail
 
 import (
 	"bytes"
-	"io/ioutil"
 	"mime/quotedprintable"
 )
 
@@ -41,19 +40,19 @@ type MessageEncoder struct {
 	*quotedprintable.Writer
 }
 
-func (this *MessageEncoder) String() string {
-	this.Writer.Close()
-	if this.b.Len() > 0 {
-		return this.b.String()
+func (me *MessageEncoder) String() string {
+	me.Writer.Close()
+	if me.b.Len() > 0 {
+		return me.b.String()
 	} else {
 		return ""
 	}
 }
 
-func (this *MessageEncoder) Bytes() []byte {
-	this.Writer.Close()
-	if this.b.Len() > 0 {
-		return this.b.Bytes()
+func (me *MessageEncoder) Bytes() []byte {
+	me.Writer.Close()
+	if me.b.Len() > 0 {
+		return me.b.Bytes()
 	} else {
 		return ""
 	}

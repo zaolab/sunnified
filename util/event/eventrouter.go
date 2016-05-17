@@ -16,58 +16,58 @@ type EventRouter struct {
 	listeners map[string][]Listener
 }
 
-func (this *EventRouter) CreateTrigger(namespace string) *EventTrigger {
-	return NewEventTrigger(this, namespace)
+func (er *EventRouter) CreateTrigger(namespace string) *EventTrigger {
+	return NewEventTrigger(er, namespace)
 }
 
-func (this *EventRouter) IsSubRouter() bool {
-	return this.base != nil
+func (er *EventRouter) IsSubRouter() bool {
+	return er.base != nil
 }
 
-func (this *EventRouter) SubRouter() *EventRouter {
-	return this.base
+func (er *EventRouter) SubRouter() *EventRouter {
+	return er.base
 }
 
-func (this *EventRouter) route(event *Event) {
-	if event != nil && this.metas != nil {
+func (er *EventRouter) route(event *Event) {
+	if event != nil && er.metas != nil {
 		if event.metas == nil {
 			event.metas = make(M)
 		}
 
-		for k, v := range this.metas {
+		for k, v := range er.metas {
 			if _, exists := event.metas[k]; !exists {
 				event.metas[k] = v
 			}
 		}
 
-		this.mutex.RLock()
-		defer this.mutex.RUnlock()
-		if lis, exists := this.listeners[JoinId(event.namespace, event.name)]; exists {
+		er.mutex.RLock()
+		defer er.mutex.RUnlock()
+		if lis, exists := er.listeners[JoinId(event.namespace, event.name)]; exists {
 			for _, f := range lis {
 				f(event)
 			}
 		}
 
-		if this.base != nil {
-			this.base.route(event)
+		if er.base != nil {
+			er.base.route(event)
 		}
 	}
 }
 
-func (this *EventRouter) Listen(id string, f Listener) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if _, exists := this.listeners[id]; !exists {
-		this.listeners[id] = make([]Listener, 0, 5)
+func (er *EventRouter) Listen(id string, f Listener) {
+	er.mutex.Lock()
+	defer er.mutex.Unlock()
+	if _, exists := er.listeners[id]; !exists {
+		er.listeners[id] = make([]Listener, 0, 5)
 	}
 
-	this.listeners[id] = append(this.listeners[id], f)
+	er.listeners[id] = append(er.listeners[id], f)
 }
 
-func (this *EventRouter) NewSubRouter(metas M) *EventRouter {
+func (er *EventRouter) NewSubRouter(metas M) *EventRouter {
 	return &EventRouter{
 		metas: metas,
-		base:  this,
+		base:  er,
 	}
 }
 

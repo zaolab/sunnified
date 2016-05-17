@@ -1,14 +1,15 @@
 package handler
 
 import (
-	"github.com/gorilla/websocket"
-	"github.com/zaolab/sunnified/mvc/controller"
-	"github.com/zaolab/sunnified/web"
+	"log"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strings"
-	"log"
+
+	"github.com/gorilla/websocket"
+	"github.com/zaolab/sunnified/mvc/controller"
+	"github.com/zaolab/sunnified/web"
 )
 
 type WSArgs []string
@@ -29,7 +30,7 @@ func NewWebSocketHandler(ctrler interface{}, allowcmd bool) *WebSocketHandler {
 	ctrlmeta, _, _, _ := controller.MakeControllerMeta(ctrler)
 
 	return &WebSocketHandler{
-		ctrl: ctrlmeta,
+		ctrl:     ctrlmeta,
 		allowcmd: allowcmd,
 	}
 }
@@ -45,12 +46,12 @@ type WebSocketHandler struct {
 	allowcmd bool
 }
 
-func (this *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	this.ServeContextHTTP(web.NewContext(w, r))
+func (wh *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	wh.ServeContextHTTP(web.NewContext(w, r))
 }
 
-func (this *WebSocketHandler) ServeContextHTTP(context *web.Context) {
-	var ctrlmgr *controller.ControlManager = controller.NewControlManager(context, this.ctrl, "_")
+func (wh *WebSocketHandler) ServeContextHTTP(context *web.Context) {
+	var ctrlmgr *controller.ControlManager = controller.NewControlManager(context, wh.ctrl, "_")
 
 	if err := context.ToWebSocket(nil, nil); err != nil {
 		context.RaiseAppError("Unable to upgrade to websocket: " + err.Error())
@@ -95,7 +96,7 @@ func (this *WebSocketHandler) ServeContextHTTP(context *web.Context) {
 			break
 		}
 
-		if this.allowcmd && msgT == websocket.TextMessage && len(p) > 0 && p[0] == '/' {
+		if wh.allowcmd && msgT == websocket.TextMessage && len(p) > 0 && p[0] == '/' {
 			args := WSArgs(argSplit.Split(strings.TrimSpace(string(p[1:len(p)])), -1))
 			cmd := strings.Replace(strings.Title(args[0]), "-", "_", -1)
 

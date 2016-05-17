@@ -4,16 +4,17 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"fmt"
-	"github.com/zaolab/sunnified/util/validate"
-	"github.com/zaolab/sunnified/web/resp"
 	"mime"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-	"path/filepath"
+
+	"github.com/zaolab/sunnified/util/validate"
+	"github.com/zaolab/sunnified/web/resp"
 )
 
 const GZIP_EXT = ".gz"
@@ -42,15 +43,15 @@ func NewStaticFileHandlerPath(basepath string, baseurl string) *StaticFileHandle
 	}
 }
 
-func (this *StaticFileHandler) ServeOptions(w http.ResponseWriter, _ *http.Request, _ map[string]string) {
+func (sh *StaticFileHandler) ServeOptions(w http.ResponseWriter, _ *http.Request, _ map[string]string) {
 	w.Header().Set("Allow", "HEAD GET OPTIONS")
 }
 
-func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
-		gzipextl = len(this.Gzip)
+		gzipextl = len(sh.Gzip)
 		urlpath  = strings.Trim(r.URL.Path, "/")
-		basepath = this.BasePath
+		basepath = sh.BasePath
 		header   = w.Header()
 		fullpath string
 		file     *os.File
@@ -69,13 +70,13 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	fullpath = filepath.FromSlash(basepath + urlpath)
 
-	if this.BaseURL != "" {
-		if !strings.HasPrefix(urlpath, this.BaseURL) {
+	if sh.BaseURL != "" {
+		if !strings.HasPrefix(urlpath, sh.BaseURL) {
 			NotFound(w, r)
 			return
 		}
 
-		urlpath = strings.Trim(urlpath[len(this.BaseURL):], "/")
+		urlpath = strings.Trim(urlpath[len(sh.BaseURL):], "/")
 	}
 
 	st, err := os.Stat(fullpath)
@@ -98,11 +99,12 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	var clen int64 = st.Size()
 	var modtime time.Time = st.ModTime()
 	var ext = path.Ext(fullpath)
-	var usegzip = clen > this.GzipMinSize && ((gzipextl == 0 && this.GzippedFile) || (gzipextl > 0 && (this.Gzip[0] == "*" || validate.IsIn(ext, this.Gzip...))))
+	var usegzip = clen > sh.GzipMinSize && ((gzipextl == 0 && sh.GzippedFile) ||
+		(gzipextl > 0 && (sh.Gzip[0] == "*" || validate.IsIn(ext, sh.Gzip...))))
 	var gzpath = fullpath + GZIP_EXT
 
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && usegzip {
-		if this.GzippedFile {
+		if sh.GzippedFile {
 			var stgz, err = os.Stat(gzpath)
 
 			if err == nil && !stgz.IsDir() && (stgz.ModTime().After(modtime) || stgz.ModTime().Equal(modtime)) {
@@ -110,10 +112,10 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 				ctype := mime.TypeByExtension(ext)
 
 				if ctype == "" {
-					if this.DefaultType == "" {
+					if sh.DefaultType == "" {
 						ctype = TYPE_DEFAULT
 					} else {
-						ctype = this.DefaultType
+						ctype = sh.DefaultType
 					}
 				}
 
@@ -146,8 +148,8 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	defer file.Close()
 
-	if this.Cache != 0 {
-		header.Set("Cache-Control", fmt.Sprintf("max-age=%d", this.Cache))
+	if sh.Cache != 0 {
+		header.Set("Cache-Control", fmt.Sprintf("max-age=%d", sh.Cache))
 	} else {
 		header.Set("Cache-Control", "max-age=0, must-revalidate")
 	}
@@ -156,12 +158,14 @@ func (this *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		var gzfile *os.File
 
 		// serveContent will not write to response if client already has a copy of file making the .gz local file empty
-		if this.GzippedFile && r.Method != "HEAD" && r.Header.Get("If-Modified-Since") == "" && r.Header.Get("If-None-Match") == "" && r.Header.Get("If-Range") == "" {
-			if gzfile, err = os.OpenFile(gzpath + ".tmp", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644); err == nil {
+		if sh.GzippedFile && r.Method != "HEAD" && r.Header.Get("If-Modified-Since") == "" &&
+			r.Header.Get("If-None-Match") == "" && r.Header.Get("If-Range") == "" {
+
+			if gzfile, err = os.OpenFile(gzpath+".tmp", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644); err == nil {
 				defer func() {
 					gzfile.Close()
 					os.Remove(gzpath)
-					if err := os.Rename(gzpath + ".tmp", gzpath); err != nil {
+					if err := os.Rename(gzpath+".tmp", gzpath); err != nil {
 						os.Remove(gzpath + ".tmp")
 					}
 				}()

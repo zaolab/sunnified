@@ -2,8 +2,9 @@ package collection
 
 import (
 	"fmt"
-	"github.com/zaolab/sunnified/util"
 	"sync"
+
+	"github.com/zaolab/sunnified/util"
 )
 
 type queuechain struct {
@@ -26,107 +27,107 @@ func NewQueue(data ...interface{}) (q *Queue) {
 	return
 }
 
-func (this *Queue) Len() int {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.len
+func (q *Queue) Len() int {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
+	return q.len
 }
 
-func (this *Queue) HasQueue() bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.len > 0
+func (q *Queue) HasQueue() bool {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
+	return q.len > 0
 }
 
-func (this *Queue) Pull() (val interface{}) {
-	val, _ = this.PullOk()
+func (q *Queue) Pull() (val interface{}) {
+	val, _ = q.PullOk()
 	return
 }
 
-func (this *Queue) PullOk() (val interface{}, ok bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (q *Queue) PullOk() (val interface{}, ok bool) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 
-	if this.head != nil {
+	if q.head != nil {
 		ok = true
-		val = this.head.data
-		this.head = this.head.next
-		if this.head == nil {
-			this.tail = nil
+		val = q.head.data
+		q.head = q.head.next
+		if q.head == nil {
+			q.tail = nil
 		}
-		this.len--
+		q.len--
 	}
 
 	return
 }
 
-func (this *Queue) PullDefault(def interface{}) interface{} {
-	if val, ok := this.PullOk(); ok {
+func (q *Queue) PullDefault(def interface{}) interface{} {
+	if val, ok := q.PullOk(); ok {
 		return val
 	}
 	return def
 }
 
-func (this *Queue) Push(val ...interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (q *Queue) Push(val ...interface{}) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 
 	for _, v := range val {
-		q := &queuechain{
+		qc := &queuechain{
 			data: v,
 		}
 
-		if this.head == nil {
-			this.head = q
+		if q.head == nil {
+			q.head = qc
 		} else {
-			this.tail.next = q
+			q.tail.next = qc
 		}
 
-		this.tail = q
-		this.len++
+		q.tail = qc
+		q.len++
 	}
 }
 
-func (this *Queue) First() (val interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (q *Queue) First() (val interface{}) {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
 
-	if this.head != nil {
-		val = this.head.data
-	}
-
-	return
-}
-
-func (this *Queue) Last() (val interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-
-	if this.tail != nil {
-		val = this.tail.data
-	} else if this.head != nil {
-		val = this.head.data
+	if q.head != nil {
+		val = q.head.data
 	}
 
 	return
 }
 
-func (this *Queue) Clear() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.head = nil
-	this.tail = nil
-	this.len = 0
+func (q *Queue) Last() (val interface{}) {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
+
+	if q.tail != nil {
+		val = q.tail.data
+	} else if q.head != nil {
+		val = q.head.data
+	}
+
+	return
 }
 
-func (this *Queue) ToSlice() []interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (q *Queue) Clear() {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	q.head = nil
+	q.tail = nil
+	q.len = 0
+}
 
-	slice := make([]interface{}, this.len)
-	curqueue := this.head
+func (q *Queue) ToSlice() []interface{} {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
 
-	for i := 0; i < this.len; i++ {
+	slice := make([]interface{}, q.len)
+	curqueue := q.head
+
+	for i := 0; i < q.len; i++ {
 		slice[i] = curqueue.data
 		curqueue = curqueue.next
 	}
@@ -134,35 +135,35 @@ func (this *Queue) ToSlice() []interface{} {
 	return slice
 }
 
-func (this *Queue) String() string {
-	return fmt.Sprintf("%v", this.ToSlice())
+func (q *Queue) String() string {
+	return fmt.Sprintf("%v", q.ToSlice())
 }
 
-func (this *Queue) ToList() *List {
-	return NewList(this.ToSlice()...)
+func (q *Queue) ToList() *List {
+	return NewList(q.ToSlice()...)
 }
 
-func (this *Queue) Clone() (q *Queue) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (q *Queue) Clone() (qu *Queue) {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
 
-	q = NewQueue()
-	curqueue := this.head
+	qu = NewQueue()
+	curqueue := q.head
 
-	for i := 0; i < this.len; i++ {
-		q.Push(curqueue.data)
+	for i := 0; i < q.len; i++ {
+		qu.Push(curqueue.data)
 	}
 
 	return
 }
 
-func (this *Queue) Iterator() PopIterator {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (q *Queue) Iterator() PopIterator {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
 	return &QueueIterator{
-		queue: this,
-		seek:  this.head,
-		mutex: this.mutex,
+		queue: q,
+		seek:  q.head,
+		mutex: q.mutex,
 		curi:  -1,
 	}
 }
@@ -175,60 +176,60 @@ type QueueIterator struct {
 	curi   int
 }
 
-func (this *QueueIterator) Next(val ...interface{}) (ok bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (qi *QueueIterator) Next(val ...interface{}) (ok bool) {
+	qi.mutex.RLock()
+	defer qi.mutex.RUnlock()
 
-	if this.seek != nil {
+	if qi.seek != nil {
 		ok = true
-		this.curi++
-		this.curval = this.seek.data
-		this.seek = this.seek.next
+		qi.curi++
+		qi.curval = qi.seek.data
+		qi.seek = qi.seek.next
 
 		if lenval := len(val); lenval == 1 {
-			util.MapValue(val[0], this.curval)
+			util.MapValue(val[0], qi.curval)
 		} else if lenval == 2 {
-			util.MapValue(val[0], this.curi)
-			util.MapValue(val[1], this.curval)
+			util.MapValue(val[0], qi.curi)
+			util.MapValue(val[1], qi.curval)
 		}
 	} else {
-		this.curi = -1
-		this.curval = nil
-		this.seek = this.queue.head
+		qi.curi = -1
+		qi.curval = nil
+		qi.seek = qi.queue.head
 	}
 
 	return
 }
 
-func (this *QueueIterator) PopNext(val ...interface{}) (ok bool) {
-	if this.curval, ok = this.queue.PullOk(); ok {
-		this.curi++
+func (qi *QueueIterator) PopNext(val ...interface{}) (ok bool) {
+	if qi.curval, ok = qi.queue.PullOk(); ok {
+		qi.curi++
 
 		if lenval := len(val); lenval == 1 {
-			util.MapValue(val[0], this.curval)
+			util.MapValue(val[0], qi.curval)
 		} else if lenval == 2 {
-			util.MapValue(val[0], this.curi)
-			util.MapValue(val[1], this.curval)
+			util.MapValue(val[0], qi.curi)
+			util.MapValue(val[1], qi.curval)
 		}
 	} else {
-		this.curi = -1
-		this.curval = nil
-		this.seek = nil
+		qi.curi = -1
+		qi.curval = nil
+		qi.seek = nil
 	}
 
 	return
 }
 
-func (this *QueueIterator) Get() (interface{}, interface{}) {
-	return this.curi, this.curval
+func (qi *QueueIterator) Get() (interface{}, interface{}) {
+	return qi.curi, qi.curval
 }
 
-func (this *QueueIterator) GetI() (int, interface{}) {
-	return this.curi, this.curval
+func (qi *QueueIterator) GetI() (int, interface{}) {
+	return qi.curi, qi.curval
 }
 
-func (this *QueueIterator) Reset() {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	this.seek = this.queue.head
+func (qi *QueueIterator) Reset() {
+	qi.mutex.RLock()
+	defer qi.mutex.RUnlock()
+	qi.seek = qi.queue.head
 }

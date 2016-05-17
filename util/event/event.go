@@ -7,20 +7,20 @@ type Event struct {
 	info      map[string]interface{}
 }
 
-func (this *Event) Id() string {
-	return this.namespace + "." + this.name
+func (e *Event) Id() string {
+	return e.namespace + "." + e.name
 }
 
-func (this *Event) Namespace() string {
-	return this.namespace
+func (e *Event) Namespace() string {
+	return e.namespace
 }
 
-func (this *Event) Name() string {
-	return this.name
+func (e *Event) Name() string {
+	return e.name
 }
 
-func (this *Event) MapInfo(varname string, i interface{}) interface{} {
-	if val, exists := this.info[varname]; exists {
+func (e *Event) MapInfo(varname string, i interface{}) interface{} {
+	if val, exists := e.info[varname]; exists {
 		i = &val
 		return val
 	}
@@ -28,13 +28,13 @@ func (this *Event) MapInfo(varname string, i interface{}) interface{} {
 	return nil
 }
 
-func (this *Event) Info(varname string) (val interface{}) {
-	val, _ = this.info[varname]
+func (e *Event) Info(varname string) (val interface{}) {
+	val, _ = e.info[varname]
 	return
 }
 
-func (this *Event) MapMetaData(varname string, i interface{}) interface{} {
-	if val, exists := this.metas[varname]; exists {
+func (e *Event) MapMetaData(varname string, i interface{}) interface{} {
+	if val, exists := e.metas[varname]; exists {
 		i = &val
 		return val
 	}
@@ -42,8 +42,8 @@ func (this *Event) MapMetaData(varname string, i interface{}) interface{} {
 	return nil
 }
 
-func (this *Event) MetaData(varname string) (val interface{}) {
-	val, _ = this.metas[varname]
+func (e *Event) MetaData(varname string) (val interface{}) {
+	val, _ = e.metas[varname]
 	return
 }
 

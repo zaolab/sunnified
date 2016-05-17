@@ -2,10 +2,11 @@ package web
 
 import (
 	"errors"
-	"github.com/zaolab/sunnified/util/validate"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/zaolab/sunnified/util/validate"
 )
 
 type UPath []string
@@ -34,7 +35,7 @@ func (upath UPath) String(index int) (s string, err error) {
 	if index >= 0 && len(upath) > index {
 		s = upath[index]
 	} else {
-		err = errors.New("Index of out range")
+		err = errors.New("index of out range")
 	}
 	return
 }
@@ -136,7 +137,7 @@ func (data PData) String(key string) (s string, err error) {
 	if slice, ok := data[key]; ok {
 		s = slice
 	} else {
-		err = errors.New("Invalid key")
+		err = errors.New("invalid key")
 	}
 	return
 }
@@ -177,16 +178,20 @@ func (data PData) Float64(key string) (i float64, err error) {
 func (data PData) Email(key string) (s string, err error) {
 	if s, err = data.String(key); err == nil {
 		if !validate.IsEmail(s) {
-			err = errors.New("Invalid email")
+			err = errors.New("invalid email")
 		}
 	}
 	return
 }
 
 func (data PData) Url(key string) (s string, err error) {
+	return data.URL(key)
+}
+
+func (data PData) URL(key string) (s string, err error) {
 	if s, err = data.String(key); err == nil {
-		if !validate.IsUrl(s) {
-			err = errors.New("Invalid url")
+		if !validate.IsURL(s) {
+			err = errors.New("invalid url")
 		}
 	}
 	return

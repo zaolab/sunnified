@@ -20,278 +20,278 @@ func NewSet(data ...interface{}) (li *Set) {
 	return
 }
 
-func (this *Set) Get(index int) interface{} {
-	return this.list.Get(index)
+func (s *Set) Get(index int) interface{} {
+	return s.list.Get(index)
 }
 
-func (this *Set) MapValue(index int, value interface{}) (val interface{}) {
-	return this.list.MapValue(index, value)
+func (s *Set) MapValue(index int, value interface{}) (val interface{}) {
+	return s.list.MapValue(index, value)
 }
 
-func (this *Set) First() interface{} {
-	return this.list.First()
+func (s *Set) First() interface{} {
+	return s.list.First()
 }
 
-func (this *Set) Last() interface{} {
-	return this.list.Last()
+func (s *Set) Last() interface{} {
+	return s.list.Last()
 }
 
-func (this *Set) Append(value interface{}) Array {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Append(value interface{}) Array {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	if _, exists := this.uniq[value]; !exists {
-		this.list.append(value)
-		this.uniq[value] = true
+	if _, exists := s.uniq[value]; !exists {
+		s.list.append(value)
+		s.uniq[value] = true
 	}
-	return this
+	return s
 }
 
-func (this *Set) Len() int {
-	return this.list.Len()
+func (s *Set) Len() int {
+	return s.list.Len()
 }
 
-func (this *Set) Extend(values []interface{}) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Extend(values []interface{}) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
 	slice := make([]interface{}, 0, len(values))
 	for _, val := range values {
-		if _, exists := this.uniq[val]; !exists {
+		if _, exists := s.uniq[val]; !exists {
 			slice = append(slice, val)
 		}
 	}
 
-	this.list.extend(slice)
+	s.list.extend(slice)
 }
 
-func (this *Set) ExtendArray(arr Array) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) ExtendArray(arr Array) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
 	slice := make([]interface{}, 0, arr.Len())
 	var val interface{}
 	for iter := arr.Iterator(); iter.Next(&val); {
-		if _, exists := this.uniq[val]; !exists {
+		if _, exists := s.uniq[val]; !exists {
 			slice = append(slice, val)
 		}
 	}
 
-	this.list.extend(slice)
+	s.list.extend(slice)
 }
 
-func (this *Set) ExtendList(list *List) {
+func (s *Set) ExtendList(list *List) {
 	list.mutex.RLock()
 	defer list.mutex.RUnlock()
-	this.Extend(list.list[0:list.lenlist])
+	s.Extend(list.list[0:list.lenlist])
 }
 
-func (this *Set) ExtendSet(set *Set) {
+func (s *Set) ExtendSet(set *Set) {
 	set.list.mutex.RLock()
 	defer set.list.mutex.RUnlock()
-	this.Extend(set.list.list[0:set.list.lenlist])
+	s.Extend(set.list.list[0:set.list.lenlist])
 }
 
-func (this *Set) Index(value interface{}) int {
-	return this.list.Index(value)
+func (s *Set) Index(value interface{}) int {
+	return s.list.Index(value)
 }
 
-func (this *Set) Indexes(value interface{}) []int {
-	return this.list.Indexes(value)
+func (s *Set) Indexes(value interface{}) []int {
+	return s.list.Indexes(value)
 }
 
-func (this *Set) LastIndex(value interface{}) int {
-	return this.list.LastIndex(value)
+func (s *Set) LastIndex(value interface{}) int {
+	return s.list.LastIndex(value)
 }
 
-func (this *Set) Contains(value ...interface{}) bool {
-	return this.list.Contains(value...)
+func (s *Set) Contains(value ...interface{}) bool {
+	return s.list.Contains(value...)
 }
 
-func (this *Set) Set(index int, value interface{}) Array {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Set(index int, value interface{}) Array {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	if _, exists := this.uniq[value]; !exists {
-		this.list.set(index, value)
-		this.uniq[value] = true
+	if _, exists := s.uniq[value]; !exists {
+		s.list.set(index, value)
+		s.uniq[value] = true
 	}
-	return this
+	return s
 }
 
-func (this *Set) Insert(index int, value interface{}) Array {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Insert(index int, value interface{}) Array {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	if _, exists := this.uniq[value]; !exists {
-		this.list.insert(index, value)
-		this.uniq[value] = true
+	if _, exists := s.uniq[value]; !exists {
+		s.list.insert(index, value)
+		s.uniq[value] = true
 	}
-	return this
+	return s
 }
 
-func (this *Set) Pop() (val interface{}) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
-	val = this.list.pop()
-	delete(this.uniq, val)
+func (s *Set) Pop() (val interface{}) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
+	val = s.list.pop()
+	delete(s.uniq, val)
 	return
 }
 
-func (this *Set) RemoveAt(index int) (val interface{}) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) RemoveAt(index int) (val interface{}) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	val = this.list.removeat(index)
-	delete(this.uniq, val)
+	val = s.list.removeat(index)
+	delete(s.uniq, val)
 	return
 }
 
-func (this *Set) Remove(value interface{}) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Remove(value interface{}) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	this.list.removeat(this.list.index(value))
-	delete(this.uniq, value)
+	s.list.removeat(s.list.index(value))
+	delete(s.uniq, value)
 }
 
-func (this *Set) Clear() {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
-	this.list.clear()
-	this.uniq = make(map[interface{}]bool)
+func (s *Set) Clear() {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
+	s.list.clear()
+	s.uniq = make(map[interface{}]bool)
 }
 
-func (this *Set) Swap(x int, y int) {
-	this.list.Swap(x, y)
+func (s *Set) Swap(x int, y int) {
+	s.list.Swap(x, y)
 }
 
-func (this *Set) Reverse() {
-	this.list.Reverse()
+func (s *Set) Reverse() {
+	s.list.Reverse()
 }
 
-func (this *Set) Less(x int, y int) bool {
-	return this.list.Less(x, y)
+func (s *Set) Less(x int, y int) bool {
+	return s.list.Less(x, y)
 }
 
-func (this *Set) Sort(f func(x interface{}, y interface{}) bool) {
-	this.list.Sort(f)
+func (s *Set) Sort(f func(x interface{}, y interface{}) bool) {
+	s.list.Sort(f)
 }
 
-func (this *Set) ToSlice() []interface{} {
-	return this.list.ToSlice()
+func (s *Set) ToSlice() []interface{} {
+	return s.list.ToSlice()
 }
 
-func (this *Set) ToList() *List {
-	return this.list.Clone()
+func (s *Set) ToList() *List {
+	return s.list.Clone()
 }
 
-func (this *Set) String() string {
-	return this.list.String()
+func (s *Set) String() string {
+	return s.list.String()
 }
 
-func (this *Set) Clone() *Set {
-	this.list.mutex.RLock()
-	defer this.list.mutex.RUnlock()
-	return this.clone()
+func (s *Set) Clone() *Set {
+	s.list.mutex.RLock()
+	defer s.list.mutex.RUnlock()
+	return s.clone()
 }
 
-func (this *Set) clone() (clone *Set) {
+func (s *Set) clone() (clone *Set) {
 	clone = &Set{
-		list: this.list.clone(),
+		list: s.list.clone(),
 		uniq: make(map[interface{}]bool),
 	}
 
-	for k, v := range this.uniq {
+	for k, v := range s.uniq {
 		clone.uniq[k] = v
 	}
 
 	return
 }
 
-func (this *Set) lock() {
-	this.list.lock()
+func (s *Set) lock() {
+	s.list.lock()
 }
 
-func (this *Set) unlock() {
-	this.list.unlock()
+func (s *Set) unlock() {
+	s.list.unlock()
 }
 
-func (this *Set) Transaction(f func(ExtendedArray) bool) {
-	this.list.mutex.Lock()
-	defer this.list.mutex.Unlock()
+func (s *Set) Transaction(f func(ExtendedArray) bool) {
+	s.list.mutex.Lock()
+	defer s.list.mutex.Unlock()
 
-	clone := this.clone()
+	clone := s.clone()
 
 	if ok := f(clone); ok {
 		clone.lock()
 		defer clone.unlock()
 
-		if clone.list.caplist != this.list.caplist {
-			this.list.caplist = clone.list.caplist
-			this.list.list = make([]interface{}, clone.list.caplist)
+		if clone.list.caplist != s.list.caplist {
+			s.list.caplist = clone.list.caplist
+			s.list.list = make([]interface{}, clone.list.caplist)
 		}
 
-		this.list.lenlist = clone.list.lenlist
-		this.list.exlen = clone.list.exlen
+		s.list.lenlist = clone.list.lenlist
+		s.list.exlen = clone.list.exlen
 
-		copy(this.list.list, clone.list.list[0:clone.list.lenlist])
+		copy(s.list.list, clone.list.list[0:clone.list.lenlist])
 
-		this.uniq = make(map[interface{}]bool)
+		s.uniq = make(map[interface{}]bool)
 
 		for k, v := range clone.uniq {
-			this.uniq[k] = v
+			s.uniq[k] = v
 		}
 
 	}
 }
 
-func (this *Set) Map(f func(interface{}) interface{}) ExtendedArray {
-	return ExtendedArray(this.MapSet(f))
+func (s *Set) Map(f func(interface{}) interface{}) ExtendedArray {
+	return ExtendedArray(s.MapSet(f))
 }
 
-func (this *Set) MapSet(f func(interface{}) interface{}) (newset *Set) {
-	this.list.mutex.RLock()
-	defer this.list.mutex.RUnlock()
+func (s *Set) MapSet(f func(interface{}) interface{}) (newset *Set) {
+	s.list.mutex.RLock()
+	defer s.list.mutex.RUnlock()
 
 	newset = &Set{
 		list: NewList(),
 		uniq: make(map[interface{}]bool),
 	}
 
-	for i := 0; i < this.list.lenlist; i++ {
-		newset.Insert(i, f(this.list.list[i]))
+	for i := 0; i < s.list.lenlist; i++ {
+		newset.Insert(i, f(s.list.list[i]))
 	}
 
 	return
 }
 
-func (this *Set) Reduce(f func(interface{}, interface{}) interface{}, init interface{}) (value interface{}) {
-	return this.list.Reduce(f, init)
+func (s *Set) Reduce(f func(interface{}, interface{}) interface{}, init interface{}) (value interface{}) {
+	return s.list.Reduce(f, init)
 }
 
-func (this *Set) Foreach(f func(int, interface{}) bool) {
-	this.list.Foreach(f)
+func (s *Set) Foreach(f func(int, interface{}) bool) {
+	s.list.Foreach(f)
 }
 
-func (this *Set) IsMatch(f func(interface{}) bool) bool {
-	return this.list.IsMatch(f)
+func (s *Set) IsMatch(f func(interface{}) bool) bool {
+	return s.list.IsMatch(f)
 }
 
-func (this *Set) Match(f func(interface{}) bool) (int, interface{}) {
-	return this.list.Match(f)
+func (s *Set) Match(f func(interface{}) bool) (int, interface{}) {
+	return s.list.Match(f)
 }
 
-func (this *Set) Filter(f func(interface{}) bool) ExtendedArray {
-	return ExtendedArray(this.FilterSet(f))
+func (s *Set) Filter(f func(interface{}) bool) ExtendedArray {
+	return ExtendedArray(s.FilterSet(f))
 }
 
-func (this *Set) FilterSet(f func(interface{}) bool) (newset *Set) {
+func (s *Set) FilterSet(f func(interface{}) bool) (newset *Set) {
 	newset = &Set{
 		uniq: make(map[interface{}]bool),
 	}
 
-	newset.list = this.list.FilterList(func(val interface{}) bool {
+	newset.list = s.list.FilterList(func(val interface{}) bool {
 		if f(val) {
 			newset.uniq[val] = true
 			return true
@@ -302,6 +302,6 @@ func (this *Set) FilterSet(f func(interface{}) bool) (newset *Set) {
 	return
 }
 
-func (this *Set) Iterator() NumIterator {
-	return this.list.Iterator()
+func (s *Set) Iterator() NumIterator {
+	return s.list.Iterator()
 }

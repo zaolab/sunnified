@@ -16,7 +16,7 @@ var (
 
 var validatormap = map[string]interface{}{
 	"isemail":         IsEmail,
-	"isurl":           IsUrl,
+	"isurl":           IsURL,
 	"isjsonpcallback": IsJSONPCallback,
 	"isnotempty":      IsNotEmpty,
 	"isin":            IsIn,
@@ -27,6 +27,10 @@ func IsEmail(s string) bool {
 }
 
 func IsUrl(s string) bool {
+	return vurl.MatchString(s)
+}
+
+func IsURL(s string) bool {
 	return vurl.MatchString(s)
 }
 
@@ -50,10 +54,10 @@ func IsIn(s string, in ...string) bool {
 
 type ReqValidator bool
 
-func (this *ReqValidator) Validate(m interface{}, req url.Values) bool {
+func (rv *ReqValidator) Validate(m interface{}, req url.Values) bool {
 	defer func() {
 		if err := recover(); err != nil {
-			*this = false
+			*rv = false
 		}
 	}()
 
@@ -79,7 +83,7 @@ func (this *ReqValidator) Validate(m interface{}, req url.Values) bool {
 				if SetValue(field, req.Get(lname)) {
 					continue
 				} else {
-					*this = false
+					*rv = false
 					return false
 				}
 			} else {
@@ -112,14 +116,14 @@ func (this *ReqValidator) Validate(m interface{}, req url.Values) bool {
 				if pass {
 					SetValue(field, val)
 				} else {
-					*this = false
+					*rv = false
 					return false
 				}
 			}
 		}
 	}
 
-	*this = true
+	*rv = true
 	return true
 }
 
@@ -135,35 +139,17 @@ func SetValue(field reflect.Value, val string) (ok bool) {
 	switch field.Kind() {
 	case reflect.String:
 		field.SetString(val)
-	case reflect.Int:
-		fallthrough
-	case reflect.Int8:
-		fallthrough
-	case reflect.Int16:
-		fallthrough
-	case reflect.Int32:
-		fallthrough
-	case reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i, err := strconv.ParseInt(val, 10, 64)
 		if err == nil {
 			field.SetInt(i)
 		}
-	case reflect.Uint:
-		fallthrough
-	case reflect.Uint8:
-		fallthrough
-	case reflect.Uint16:
-		fallthrough
-	case reflect.Uint32:
-		fallthrough
-	case reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		ui, err := strconv.ParseUint(val, 10, 64)
 		if err == nil {
 			field.SetUint(ui)
 		}
-	case reflect.Float32:
-		fallthrough
-	case reflect.Float64:
+	case reflect.Float32, reflect.Float64:
 		fl, err := strconv.ParseFloat(val, 64)
 		if err == nil {
 			field.SetFloat(fl)

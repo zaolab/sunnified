@@ -32,8 +32,8 @@ type CacheMiddleWare struct {
 	profile int
 }
 
-func (this CacheMiddleWare) Request(ctxt *web.Context) {
-	switch this.profile {
+func (mw CacheMiddleWare) Request(ctxt *web.Context) {
+	switch mw.profile {
 	case CACHE_PROFILE_NOCACHE:
 		ctxt.PrivateNoCache()
 	case CACHE_PROFILE_NOSTORE:

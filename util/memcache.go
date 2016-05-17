@@ -2,27 +2,27 @@ package util
 
 import (
 	"encoding/json"
+
 	"github.com/bradfitz/gomemcache/memcache"
-	//"log"
 )
 
-var mc = Memcache{memcache.New("127.0.0.1:11211")}
+var mcache Memcache = Memcache{nil}
 
 type Memcache struct {
 	*memcache.Client
 }
 
-func (this Memcache) Get(key string, m interface{}) (err error) {
+func (mc Memcache) Get(key string, m interface{}) (err error) {
 	var item *memcache.Item
 
-	if item, err = this.Client.Get(key); err == nil {
+	if item, err = mc.Client.Get(key); err == nil {
 		err = json.Unmarshal(item.Value, m)
 	}
 
 	return err
 }
 
-func (this Memcache) Set(key string, m interface{}, expiry ...int) (err error) {
+func (mc Memcache) Set(key string, m interface{}, expiry ...int) (err error) {
 	var e int32
 	var val []byte
 	if len(expiry) > 0 {
@@ -30,14 +30,17 @@ func (this Memcache) Set(key string, m interface{}, expiry ...int) (err error) {
 	}
 
 	if val, err = json.Marshal(m); err == nil {
-		err = this.Client.Set(&memcache.Item{Key: key, Value: val, Expiration: e})
+		err = mc.Client.Set(&memcache.Item{Key: key, Value: val, Expiration: e})
 	}
 
 	return
 }
 
 func DefaultMemcache() Memcache {
-	return mc
+	if mcache.Client == nil {
+		mcache = NewMemcache("127.0.0.1:11211")
+	}
+	return mcache
 }
 
 func NewMemcache(host ...string) Memcache {
@@ -45,9 +48,9 @@ func NewMemcache(host ...string) Memcache {
 }
 
 func Get(key string, m interface{}) (err error) {
-	return mc.Get(key, m)
+	return DefaultMemcache().Get(key, m)
 }
 
 func Set(key string, m interface{}, expiry ...int) (err error) {
-	return mc.Set(key, m, expiry...)
+	return DefaultMemcache().Set(key, m, expiry...)
 }

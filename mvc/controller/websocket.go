@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"sync"
+
 	"github.com/gorilla/websocket"
 	"github.com/zaolab/sunnified/web"
-	"sync"
 )
 
 func NewWebSocketChat() *WebsocketChat {
@@ -17,57 +18,57 @@ type WebsocketChat struct {
 	mutex    sync.RWMutex
 }
 
-func (this *WebsocketChat) AddChannel(channel string) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (wc *WebsocketChat) AddChannel(channel string) {
+	wc.mutex.Lock()
+	defer wc.mutex.Unlock()
 
-	if this.channels[channel] == nil {
-		this.channels[channel] = make(map[string]map[*web.Context]*websocket.Conn)
+	if wc.channels[channel] == nil {
+		wc.channels[channel] = make(map[string]map[*web.Context]*websocket.Conn)
 	}
 }
 
-func (this *WebsocketChat) AddClient(channel, uid string, context *web.Context) {
+func (wc *WebsocketChat) AddClient(channel, uid string, context *web.Context) {
 	if uid == "" {
 		uid = getUserId(context.Session)
 	}
 
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	wc.mutex.Lock()
+	defer wc.mutex.Unlock()
 
-	if this.channels[channel] != nil {
-		if this.channels[channel][uid] == nil {
-			this.channels[channel][uid] = make(map[*web.Context]*websocket.Conn)
+	if wc.channels[channel] != nil {
+		if wc.channels[channel][uid] == nil {
+			wc.channels[channel][uid] = make(map[*web.Context]*websocket.Conn)
 		}
-		this.channels[channel][uid][context] = context.WebSocket
+		wc.channels[channel][uid][context] = context.WebSocket
 	}
 }
 
-func (this *WebsocketChat) RemoveClient(channel, uid string, context *web.Context) {
+func (wc *WebsocketChat) RemoveClient(channel, uid string, context *web.Context) {
 	if uid == "" {
 		uid = getUserId(context.Session)
 	}
 
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	wc.mutex.Lock()
+	defer wc.mutex.Unlock()
 
 	if context == nil {
-		delete(this.channels[channel], uid)
-	} else if this.channels[channel] != nil {
-		delete(this.channels[channel][uid], context)
-		if len(this.channels[channel][uid]) == 0 {
-			delete(this.channels[channel], uid)
+		delete(wc.channels[channel], uid)
+	} else if wc.channels[channel] != nil {
+		delete(wc.channels[channel][uid], context)
+		if len(wc.channels[channel][uid]) == 0 {
+			delete(wc.channels[channel], uid)
 		}
 	}
 }
 
-func (this *WebsocketChat) Client(channel, uid string) map[*web.Context]*websocket.Conn {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (wc *WebsocketChat) Client(channel, uid string) map[*web.Context]*websocket.Conn {
+	wc.mutex.RLock()
+	defer wc.mutex.RUnlock()
 
-	if this.channels[channel] != nil && this.channels[channel][uid] != nil{
+	if wc.channels[channel] != nil && wc.channels[channel][uid] != nil {
 		m := make(map[*web.Context]*websocket.Conn)
 
-		for k, v := range this.channels[channel][uid] {
+		for k, v := range wc.channels[channel][uid] {
 			m[k] = v
 		}
 
@@ -77,29 +78,29 @@ func (this *WebsocketChat) Client(channel, uid string) map[*web.Context]*websock
 	return nil
 }
 
-func (this *WebsocketChat) MessageClient(channel, uid string, msgT int, msg []byte) bool {
-	return this.message_(channel, uid, msgT, msg)
+func (wc *WebsocketChat) MessageClient(channel, uid string, msgT int, msg []byte) bool {
+	return wc.message_(channel, uid, msgT, msg)
 }
 
-func (this *WebsocketChat) MessageJSONClient(channel, uid string, msg interface{}) bool {
-	return this.message_(channel, uid, -1, msg)
+func (wc *WebsocketChat) MessageJSONClient(channel, uid string, msg interface{}) bool {
+	return wc.message_(channel, uid, -1, msg)
 }
 
-func (this *WebsocketChat) Broadcast(channel string, msgT int, msg []byte) {
-	this.broadcast_(channel, msgT, msg)
+func (wc *WebsocketChat) Broadcast(channel string, msgT int, msg []byte) {
+	wc.broadcast_(channel, msgT, msg)
 }
 
-func (this *WebsocketChat) BroadcastJSON(channel string, msg interface{}) {
-	this.broadcast_(channel, -1, msg)
+func (wc *WebsocketChat) BroadcastJSON(channel string, msg interface{}) {
+	wc.broadcast_(channel, -1, msg)
 }
 
-func (this *WebsocketChat) message_(channel, uid string, msgT int, msg interface{}) bool {
-	client := this.Client(channel, uid)
+func (wc *WebsocketChat) message_(channel, uid string, msgT int, msg interface{}) bool {
+	client := wc.Client(channel, uid)
 
 	if client != nil && len(client) > 0 {
 		var (
 			removed = 0
-			err error
+			err     error
 		)
 
 		for ctxt, ws := range client {
@@ -110,7 +111,7 @@ func (this *WebsocketChat) message_(channel, uid string, msgT int, msg interface
 			}
 
 			if err != nil {
-				this.RemoveClient(channel, uid, ctxt)
+				wc.RemoveClient(channel, uid, ctxt)
 				removed++
 			}
 		}
@@ -121,11 +122,11 @@ func (this *WebsocketChat) message_(channel, uid string, msgT int, msg interface
 	return false
 }
 
-func (this *WebsocketChat) broadcast_(channel string, msgT int, msg interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (wc *WebsocketChat) broadcast_(channel string, msgT int, msg interface{}) {
+	wc.mutex.RLock()
+	defer wc.mutex.RUnlock()
 
-	if cc, ok := this.channels[channel]; ok {
+	if cc, ok := wc.channels[channel]; ok {
 		queue := make(chan struct{}, 500) // max 500 goroutines concurrent
 		wg := sync.WaitGroup{}
 		wg.Add(len(cc))
@@ -151,7 +152,7 @@ func (this *WebsocketChat) broadcast_(channel string, msgT int, msg interface{})
 					if err != nil {
 						// async this so we do not have a deadlock...
 						// all remove clients will only complete after the whole channel is looped
-						go this.RemoveClient(channel, uid, ctxt)
+						go wc.RemoveClient(channel, uid, ctxt)
 					}
 				}(uid, ctxt, ws)
 			}

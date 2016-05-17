@@ -1,14 +1,15 @@
 package controller
 
 import (
-	"github.com/zaolab/sunnified/mvc"
-	"github.com/zaolab/sunnified/web"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/zaolab/sunnified/mvc"
+	"github.com/zaolab/sunnified/web"
 )
 
 var (
@@ -64,46 +65,46 @@ type ControllerGroup struct {
 	modmutex sync.RWMutex
 }
 
-func (this *ControllerGroup) HasModule(mod string) bool {
-	this.detmutex.RLock()
-	defer this.detmutex.RUnlock()
+func (cg *ControllerGroup) HasModule(mod string) bool {
+	cg.detmutex.RLock()
+	defer cg.detmutex.RUnlock()
 
-	_, exists := this.details[mod]
+	_, exists := cg.details[mod]
 	return exists
 }
 
-func (this *ControllerGroup) Module(mod string) (m map[string]*ControllerMeta) {
-	this.detmutex.RLock()
-	defer this.detmutex.RUnlock()
+func (cg *ControllerGroup) Module(mod string) (m map[string]*ControllerMeta) {
+	cg.detmutex.RLock()
+	defer cg.detmutex.RUnlock()
 
 	mod = strings.ToLower(mod)
-	if md, ok := this.details[mod]; ok {
+	if md, ok := cg.details[mod]; ok {
 		m = md
 	}
 
 	return
 }
 
-func (this *ControllerGroup) HasController(mod, con string) (exists bool) {
-	this.detmutex.RLock()
-	defer this.detmutex.RUnlock()
+func (cg *ControllerGroup) HasController(mod, con string) (exists bool) {
+	cg.detmutex.RLock()
+	defer cg.detmutex.RUnlock()
 
-	if _, exists = this.details[mod]; exists {
+	if _, exists = cg.details[mod]; exists {
 		con, _ = parseReqMethod(con)
-		_, exists = this.details[mod][con]
+		_, exists = cg.details[mod][con]
 	}
 
 	return
 }
 
-func (this *ControllerGroup) Controller(mod, con string) (c *ControllerMeta) {
-	this.detmutex.RLock()
-	defer this.detmutex.RUnlock()
+func (cg *ControllerGroup) Controller(mod, con string) (c *ControllerMeta) {
+	cg.detmutex.RLock()
+	defer cg.detmutex.RUnlock()
 
 	mod = strings.ToLower(mod)
-	if _, ok := this.details[mod]; ok {
+	if _, ok := cg.details[mod]; ok {
 		con, _ = parseReqMethod(con)
-		if cm, ok := this.details[mod][con]; ok {
+		if cm, ok := cg.details[mod][con]; ok {
 			c = cm
 		}
 	}
@@ -111,21 +112,21 @@ func (this *ControllerGroup) Controller(mod, con string) (c *ControllerMeta) {
 	return
 }
 
-func (this *ControllerGroup) AddModule(alias string, modname string) {
-	this.modmutex.Lock()
-	defer this.modmutex.Unlock()
-	this.modules[alias] = modname
+func (cg *ControllerGroup) AddModule(alias string, modname string) {
+	cg.modmutex.Lock()
+	defer cg.modmutex.Unlock()
+	cg.modules[alias] = modname
 }
 
-func (this *ControllerGroup) AddController(cinterface interface{}) (string, string) {
-	this.detmutex.Lock()
-	defer this.detmutex.Unlock()
+func (cg *ControllerGroup) AddController(cinterface interface{}) (string, string) {
+	cg.detmutex.Lock()
+	defer cg.detmutex.Unlock()
 
 	cm, controller, alias, modname := MakeControllerMeta(cinterface)
 
-	if this.details[alias] == nil {
-		this.details[alias] = make(map[string]*ControllerMeta)
-	} else if c, exists := this.details[alias][controller]; exists {
+	if cg.details[alias] == nil {
+		cg.details[alias] = make(map[string]*ControllerMeta)
+	} else if c, exists := cg.details[alias][controller]; exists {
 		if cm.rtype == c.rtype {
 			return alias, controller
 		} else {
@@ -133,21 +134,21 @@ func (this *ControllerGroup) AddController(cinterface interface{}) (string, stri
 		}
 	}
 
-	this.createModAlias(alias, modname)
-	this.details[alias][controller] = cm
+	cg.createModAlias(alias, modname)
+	cg.details[alias][controller] = cm
 	return alias, controller
 }
 
-func (this *ControllerGroup) createModAlias(alias, modname string) {
-	this.modmutex.Lock()
-	defer this.modmutex.Unlock()
+func (cg *ControllerGroup) createModAlias(alias, modname string) {
+	cg.modmutex.Lock()
+	defer cg.modmutex.Unlock()
 
 	// check to see if module alias extracted already exists
 	// if not add it into the global modules var
-	if _, ok := this.modules[alias]; ok && this.modules[alias] != modname {
-		panic("Duplicate module name: " + alias + ", " + this.modules[alias])
+	if _, ok := cg.modules[alias]; ok && cg.modules[alias] != modname {
+		panic("Duplicate module name: " + alias + ", " + cg.modules[alias])
 	} else if !ok {
-		this.modules[alias] = modname
+		cg.modules[alias] = modname
 	}
 }
 
@@ -179,7 +180,7 @@ func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, m
 	var (
 		reqmeth ReqMethod
 		ownname string
-		rtype = reflect.TypeOf(cinterface)
+		rtype   = reflect.TypeOf(cinterface)
 		rawtype = rtype
 	)
 

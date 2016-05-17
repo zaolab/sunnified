@@ -28,71 +28,71 @@ func NewStack(data ...interface{}) (s *Stack) {
 	return
 }
 
-func (this *Stack) Len() int {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.len
+func (s *Stack) Len() int {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.len
 }
 
-func (this *Stack) Push(value interface{}) {
-	s := &stackchain{
+func (s *Stack) Push(value interface{}) {
+	sc := &stackchain{
 		data: value,
 	}
 
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	if this.tail != nil {
-		s.prev = this.tail
+	if s.tail != nil {
+		sc.prev = s.tail
 	}
 
-	this.tail = s
-	this.len++
+	s.tail = sc
+	s.len++
 }
 
-func (this *Stack) Pop() (value interface{}) {
-	value, _ = this.PopOk()
+func (s *Stack) Pop() (value interface{}) {
+	value, _ = s.PopOk()
 	return
 }
 
-func (this *Stack) PopOk() (value interface{}, ok bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (s *Stack) PopOk() (value interface{}, ok bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	if this.tail != nil {
+	if s.tail != nil {
 		ok = true
-		value = this.tail.data
-		this.tail = this.tail.prev
-		this.len--
+		value = s.tail.data
+		s.tail = s.tail.prev
+		s.len--
 	}
 
 	return
 }
 
-func (this *Stack) Last() (value interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	if this.tail != nil {
-		value = this.tail.data
+func (s *Stack) Last() (value interface{}) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if s.tail != nil {
+		value = s.tail.data
 	}
 	return
 }
 
-func (this *Stack) Clear() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.tail = nil
-	this.len = 0
+func (s *Stack) Clear() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.tail = nil
+	s.len = 0
 }
 
-func (this *Stack) ToSlice() (slice []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (s *Stack) ToSlice() (slice []interface{}) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	slice = make([]interface{}, this.len)
-	curchain := this.tail
+	slice = make([]interface{}, s.len)
+	curchain := s.tail
 
-	for i := this.len - 1; i >= 0; i-- {
+	for i := s.len - 1; i >= 0; i-- {
 		slice[i] = curchain.data
 		curchain = curchain.prev
 	}
@@ -100,26 +100,26 @@ func (this *Stack) ToSlice() (slice []interface{}) {
 	return
 }
 
-func (this *Stack) String() string {
-	return fmt.Sprintf("%v", this.ToSlice())
+func (s *Stack) String() string {
+	return fmt.Sprintf("%v", s.ToSlice())
 }
 
-func (this *Stack) ToList() *List {
-	return NewList(this.ToSlice()...)
+func (s *Stack) ToList() *List {
+	return NewList(s.ToSlice()...)
 }
 
-func (this *Stack) Clone() (s *Stack) {
-	s = NewStack()
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (s *Stack) Clone() (st *Stack) {
+	st = NewStack()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	curchain := this.tail
-	s.tail = &stackchain{
+	curchain := s.tail
+	st.tail = &stackchain{
 		data: curchain.data,
 	}
-	newchain := s.tail
+	newchain := st.tail
 
-	for i := 0; i < this.len; i++ {
+	for i := 0; i < s.len; i++ {
 		curchain = curchain.prev
 		schain := &stackchain{
 			data: curchain.data,

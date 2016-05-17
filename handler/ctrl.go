@@ -1,11 +1,12 @@
 package handler
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/zaolab/sunnified/mvc/controller"
 	"github.com/zaolab/sunnified/router"
 	"github.com/zaolab/sunnified/web"
-	"net/http"
-	"strings"
 )
 
 type ControllerHandler struct {
@@ -30,26 +31,26 @@ func NewNamedControllerHandler(mod, ctrler, action string) (chand *ControllerHan
 	return
 }
 
-func (this *ControllerHandler) SetController(mod, ctrler string) {
-	this.controlmeta = controller.Controller(mod, ctrler)
+func (ch *ControllerHandler) SetController(mod, ctrler string) {
+	ch.controlmeta = controller.Controller(mod, ctrler)
 }
 
-func (this *ControllerHandler) SetControllerMeta(controlmeta *controller.ControllerMeta) {
-	this.controlmeta = controlmeta
+func (ch *ControllerHandler) SetControllerMeta(controlmeta *controller.ControllerMeta) {
+	ch.controlmeta = controlmeta
 }
 
-func (this *ControllerHandler) SetAction(action string) {
-	this.action = action
+func (ch *ControllerHandler) SetAction(action string) {
+	ch.action = action
 }
 
-func (this *ControllerHandler) ServeOptions(w http.ResponseWriter, r *http.Request, origin map[string]string) {
-	this.ServeContextOptions(web.NewContext(w, r), origin)
+func (ch *ControllerHandler) ServeOptions(w http.ResponseWriter, r *http.Request, origin map[string]string) {
+	ch.ServeContextOptions(web.NewContext(w, r), origin)
 }
 
-func (this *ControllerHandler) ServeContextOptions(ctxt *web.Context, origin map[string]string) {
+func (ch *ControllerHandler) ServeContextOptions(ctxt *web.Context, origin map[string]string) {
 	router.SetHeaderOrigin(ctxt.Response, ctxt.Request, origin)
 	header := ctxt.Response.Header()
-	ctrlmgr := this.GetControlManager(ctxt)
+	ctrlmgr := ch.GetControlManager(ctxt)
 	mlist := ctrlmgr.AvailableMethodsList()
 	var allow string = "HEAD, OPTIONS"
 	mliststr := strings.Join(mlist, ", ")
@@ -61,12 +62,12 @@ func (this *ControllerHandler) ServeContextOptions(ctxt *web.Context, origin map
 	ctxt.Response.WriteHeader(200)
 }
 
-func (this *ControllerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	this.ServeContextHTTP(web.NewContext(w, r))
+func (ch *ControllerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ch.ServeContextHTTP(web.NewContext(w, r))
 }
 
-func (this *ControllerHandler) ServeContextHTTP(ctxt *web.Context) {
-	if ctrlmgr := this.GetControlManager(ctxt); ctrlmgr != nil {
+func (ch *ControllerHandler) ServeContextHTTP(ctxt *web.Context) {
+	if ctrlmgr := ch.GetControlManager(ctxt); ctrlmgr != nil {
 		ctrlmgr.Prepare()
 		state, vw := ctrlmgr.Execute()
 		if state != -1 && vw == nil {
@@ -80,9 +81,9 @@ func (this *ControllerHandler) ServeContextHTTP(ctxt *web.Context) {
 	}
 }
 
-func (this *ControllerHandler) GetControlManager(context *web.Context) (cm *controller.ControlManager) {
+func (ch *ControllerHandler) GetControlManager(context *web.Context) (cm *controller.ControlManager) {
 	var (
-		act    string = this.action
+		act    string = ch.action
 		action string
 		acterr error
 	)
@@ -94,7 +95,7 @@ func (this *ControllerHandler) GetControlManager(context *web.Context) (cm *cont
 		act = "_"
 	}
 
-	if acterr == nil && act != "_" && !this.controlmeta.HasAction(act) && this.controlmeta.HasAction("index") {
+	if acterr == nil && act != "_" && !ch.controlmeta.HasAction(act) && ch.controlmeta.HasAction("index") {
 		act = "_"
 		lenupath := len(context.UPath) + 1
 		tmpupath := make(web.UPath, lenupath)
@@ -104,7 +105,7 @@ func (this *ControllerHandler) GetControlManager(context *web.Context) (cm *cont
 		delete(context.PData, "action")
 	}
 
-	cm = controller.NewControlManager(context, this.controlmeta, act)
+	cm = controller.NewControlManager(context, ch.controlmeta, act)
 
 	return
 }

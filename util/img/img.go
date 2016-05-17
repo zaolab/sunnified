@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/nfnt/resize"
-	"github.com/zaolab/sunnified/util"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -15,9 +13,12 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/nfnt/resize"
+	"github.com/zaolab/sunnified/util"
 )
 
-var ErrImageExceedSize = errors.New("Image size too large")
+var ErrImageExceedSize = errors.New("image size too large")
 
 func SaveThumbnailAndImage(imgr io.ReadSeeker, maxw, maxh int, tdir, dir, fname string) (tname, name string, err error) {
 	var resized bool

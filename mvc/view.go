@@ -1,9 +1,7 @@
 package mvc
 
 import (
-	//_ "github.com/zaolab/sunnified/util/extype"
 	"fmt"
-	"github.com/zaolab/sunnified/web"
 	"html/template"
 	"net/url"
 	"path/filepath"
@@ -11,6 +9,9 @@ import (
 	"sync"
 	txtemplate "text/template"
 	"time"
+
+	//_ "github.com/zaolab/sunnified/util/extype"
+	"github.com/zaolab/sunnified/web"
 )
 
 var (

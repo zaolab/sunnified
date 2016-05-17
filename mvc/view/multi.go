@@ -3,12 +3,13 @@ package view
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/zaolab/sunnified/mvc"
-	"github.com/zaolab/sunnified/web"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/zaolab/sunnified/mvc"
+	"github.com/zaolab/sunnified/web"
 )
 
 type MultiView struct {
@@ -17,86 +18,86 @@ type MultiView struct {
 	fmap    template.FuncMap
 }
 
-func (this *MultiView) SetViewFunc(name string, f interface{}) {
-	if this.fmap == nil {
-		this.fmap = template.FuncMap{}
+func (mv *MultiView) SetViewFunc(name string, f interface{}) {
+	if mv.fmap == nil {
+		mv.fmap = template.FuncMap{}
 	}
-	this.fmap[name] = f
+	mv.fmap[name] = f
 }
 
-func (this *MultiView) SetViewFuncName(name string) {
-	if this.fmap == nil {
-		this.fmap = template.FuncMap{}
+func (mv *MultiView) SetViewFuncName(name string) {
+	if mv.fmap == nil {
+		mv.fmap = template.FuncMap{}
 	}
 
-	if _, exists := this.fmap[name]; !exists {
-		this.fmap[name] = func(i ...interface{}) string { return "" }
+	if _, exists := mv.fmap[name]; !exists {
+		mv.fmap[name] = func(i ...interface{}) string { return "" }
 	}
 }
 
-func (this *MultiView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
-	this.GetTmpl = f
+func (mv *MultiView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
+	mv.GetTmpl = f
 }
 
-func (this *MultiView) SetVMap(vmap ...mvc.VM) {
-	if this.VM == nil {
-		this.VM = mvc.VM{}
+func (mv *MultiView) SetVMap(vmap ...mvc.VM) {
+	if mv.VM == nil {
+		mv.VM = mvc.VM{}
 	}
 	for _, vm := range vmap {
 		for k, v := range vm {
-			this.VM[k] = v
+			mv.VM[k] = v
 		}
 	}
 }
 
-func (this *MultiView) SetData(name string, value interface{}) {
-	if this.VM == nil {
-		this.VM = mvc.VM{}
+func (mv *MultiView) SetData(name string, value interface{}) {
+	if mv.VM == nil {
+		mv.VM = mvc.VM{}
 	}
-	this.VM[name] = value
+	mv.VM[name] = value
 }
 
-func (this *MultiView) ContentType(ctxt *web.Context) string {
+func (mv *MultiView) ContentType(ctxt *web.Context) string {
 	return "text/html; charset=utf-8"
 }
 
-func (this *MultiView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
-	if this.GetTmpl != nil {
-		tmpl, err = this.GetTmpl(this.fmap)
+func (mv *MultiView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
+	if mv.GetTmpl != nil {
+		tmpl, err = mv.GetTmpl(mv.fmap)
 	} else {
-		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), this.fmap)
+		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), mv.fmap)
 	}
 
 	return
 }
 
-func (this *MultiView) Render(ctxt *web.Context) (b []byte, err error) {
-	if tmpl, _, err := this.getTmpl(mvc.GetMvcMeta(ctxt)); err == nil {
+func (mv *MultiView) Render(ctxt *web.Context) (b []byte, err error) {
+	if tmpl, _, err := mv.getTmpl(mvc.GetMvcMeta(ctxt)); err == nil {
 		buf := &bytes.Buffer{}
-		tmpl.Execute(buf, this.VM)
+		tmpl.Execute(buf, mv.VM)
 		b = buf.Bytes()
 	}
 
 	return
 }
 
-func (this *MultiView) RenderString(ctxt *web.Context) (s string, err error) {
+func (mv *MultiView) RenderString(ctxt *web.Context) (s string, err error) {
 	var b []byte
-	b, err = this.Render(ctxt)
+	b, err = mv.Render(ctxt)
 	if err == nil {
 		s = string(b)
 	}
 	return
 }
 
-func (this *MultiView) Publish(ctxt *web.Context) (err error) {
+func (mv *MultiView) Publish(ctxt *web.Context) (err error) {
 	names := mvc.GetMvcMeta(ctxt)
 	if names[mvc.MVC_ACTION] == "" {
 		names[mvc.MVC_ACTION] = "_"
 	}
 
 	var tmpl *template.Template
-	tmpl, _, err = this.getTmpl(names)
+	tmpl, _, err = mv.getTmpl(names)
 
 	if err == nil {
 		var method = ctxt.Method()
@@ -117,7 +118,7 @@ func (this *MultiView) Publish(ctxt *web.Context) (err error) {
 			ctxt.SetHeader("Vary", "Accept-Encoding")
 			ctxt.Response.WriteHeader(200)
 
-			err = tmpl.Execute(tw, this.VM)
+			err = tmpl.Execute(tw, mv.VM)
 
 			if err != nil {
 				// Header already sent... multiple write headers

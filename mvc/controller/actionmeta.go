@@ -81,74 +81,74 @@ type DataMeta struct {
 	fields []*FieldMeta
 }
 
-func (this *ActionMeta) Name() string {
-	return this.name
+func (am *ActionMeta) Name() string {
+	return am.name
 }
 
-func (this *ActionMeta) RMeth() reflect.Method {
-	return this.rmeth
+func (am *ActionMeta) RMeth() reflect.Method {
+	return am.rmeth
 }
 
-func (this *ActionMeta) ReqMeth() ReqMethod {
-	return this.reqmeth
+func (am *ActionMeta) ReqMeth() ReqMethod {
+	return am.reqmeth
 }
 
-func (this *ActionMeta) Args() []*ArgMeta {
-	out := make([]*ArgMeta, len(this.args))
-	copy(out, this.args)
+func (am *ActionMeta) Args() []*ArgMeta {
+	out := make([]*ArgMeta, len(am.args))
+	copy(out, am.args)
 	return out
 }
 
-func (this ResultStyle) IsNil() bool {
-	return !this.view && !this.vmap && !this.mapsi
+func (rs ResultStyle) IsNil() bool {
+	return !rs.view && !rs.vmap && !rs.mapsi
 }
 
-func (this ResultStyle) View() bool {
-	return this.view
+func (rs ResultStyle) View() bool {
+	return rs.view
 }
 
-func (this ResultStyle) Vmap() bool {
-	return this.vmap
+func (rs ResultStyle) Vmap() bool {
+	return rs.vmap
 }
 
-func (this ResultStyle) MapSI() bool {
-	return this.mapsi
+func (rs ResultStyle) MapSI() bool {
+	return rs.mapsi
 }
 
-func (this ResultStyle) Status() bool {
-	return this.status
+func (rs ResultStyle) Status() bool {
+	return rs.status
 }
 
-func (this *DataMeta) Name() string {
-	return this.name
+func (dm *DataMeta) Name() string {
+	return dm.name
 }
 
-func (this *DataMeta) LName() string {
-	return this.lname
+func (dm *DataMeta) LName() string {
+	return dm.lname
 }
 
-func (this *DataMeta) T() DataType {
-	return this.t
+func (dm *DataMeta) T() DataType {
+	return dm.t
 }
 
-func (this *DataMeta) RType() reflect.Type {
-	return this.rtype
+func (dm *DataMeta) RType() reflect.Type {
+	return dm.rtype
 }
 
-func (this *DataMeta) Fields() []*FieldMeta {
-	out := make([]*FieldMeta, len(this.fields))
-	copy(out, this.fields)
+func (dm *DataMeta) Fields() []*FieldMeta {
+	out := make([]*FieldMeta, len(dm.fields))
+	copy(out, dm.fields)
 	return out
 }
 
-func (this *FieldMeta) Rexexp() *regexp.Regexp {
-	return this.rex
+func (fm *FieldMeta) Rexexp() *regexp.Regexp {
+	return fm.rex
 }
 
-func (this *FieldMeta) Anonymous() bool {
-	return this.anonymous
+func (fm *FieldMeta) Anonymous() bool {
+	return fm.anonymous
 }
 
-func (this *FieldMeta) Tag() reflect.StructTag {
-	return this.tag
+func (fm *FieldMeta) Tag() reflect.StructTag {
+	return fm.tag
 }

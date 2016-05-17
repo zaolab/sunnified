@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 )
 
-var ErrCastFailed = errors.New("Type casting failed")
+var ErrCastFailed = errors.New("type casting failed")
 
 func FileExists(f string) bool {
 	_, err := os.Stat(f)
@@ -288,8 +288,8 @@ func AppendValue(dest interface{}, value ...interface{}) (err error) {
 
 type ValueGetter func(key interface{}) (interface{}, bool)
 
-func (this ValueGetter) Get(key interface{}, def ...interface{}) (res interface{}) {
-	if val, ok := this(key); ok {
+func (vg ValueGetter) Get(key interface{}, def ...interface{}) (res interface{}) {
+	if val, ok := vg(key); ok {
 		res = val
 	} else if len(def) > 0 {
 		res = def[0]
@@ -298,36 +298,36 @@ func (this ValueGetter) Get(key interface{}, def ...interface{}) (res interface{
 	return
 }
 
-func (this ValueGetter) GetSlice(key string, def ...[]interface{}) (res []interface{}) {
+func (vg ValueGetter) GetSlice(key string, def ...[]interface{}) (res []interface{}) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if v, ok := this.Get(key).([]interface{}); ok {
+	if v, ok := vg.Get(key).([]interface{}); ok {
 		res = v
 	}
 
 	return
 }
 
-func (this ValueGetter) GetBool(key string, def ...bool) (res bool) {
+func (vg ValueGetter) GetBool(key string, def ...bool) (res bool) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if v, ok := this.Get(key).(bool); ok {
+	if v, ok := vg.Get(key).(bool); ok {
 		res = v
 	}
 
 	return
 }
 
-func (this ValueGetter) GetBoolSlice(key string, def ...[]bool) (res []bool) {
+func (vg ValueGetter) GetBoolSlice(key string, def ...[]bool) (res []bool) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []bool:
 		res = v
 	case []interface{}:
@@ -344,12 +344,12 @@ func (this ValueGetter) GetBoolSlice(key string, def ...[]bool) (res []bool) {
 	return
 }
 
-func (this ValueGetter) GetString(key string, def ...string) (res string) {
+func (vg ValueGetter) GetString(key string, def ...string) (res string) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case string:
 		res = v
 	case fmt.Stringer:
@@ -359,12 +359,12 @@ func (this ValueGetter) GetString(key string, def ...string) (res string) {
 	return
 }
 
-func (this ValueGetter) GetStringSlice(key string, def ...[]string) (res []string) {
+func (vg ValueGetter) GetStringSlice(key string, def ...[]string) (res []string) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []string:
 		res = v
 	case []interface{}:
@@ -385,24 +385,24 @@ func (this ValueGetter) GetStringSlice(key string, def ...[]string) (res []strin
 	return
 }
 
-func (this ValueGetter) GetByte(key string, def ...byte) (res byte) {
+func (vg ValueGetter) GetByte(key string, def ...byte) (res byte) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if v, ok := this.Get(key).(byte); ok {
+	if v, ok := vg.Get(key).(byte); ok {
 		res = v
 	}
 
 	return
 }
 
-func (this ValueGetter) GetByteSlice(key string, def ...[]byte) (res []byte) {
+func (vg ValueGetter) GetByteSlice(key string, def ...[]byte) (res []byte) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []byte:
 		res = v
 	case []interface{}:
@@ -419,12 +419,12 @@ func (this ValueGetter) GetByteSlice(key string, def ...[]byte) (res []byte) {
 	return
 }
 
-func (this ValueGetter) GetBytes(key string, def ...[]byte) (res []byte) {
+func (vg ValueGetter) GetBytes(key string, def ...[]byte) (res []byte) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []byte:
 		res = v
 	case string:
@@ -436,12 +436,12 @@ func (this ValueGetter) GetBytes(key string, def ...[]byte) (res []byte) {
 	return
 }
 
-func (this ValueGetter) GetBytesSlice(key string, def ...[][]byte) (res [][]byte) {
+func (vg ValueGetter) GetBytesSlice(key string, def ...[][]byte) (res [][]byte) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case [][]byte:
 		res = v
 	case []interface{}:
@@ -465,20 +465,20 @@ func (this ValueGetter) GetBytesSlice(key string, def ...[][]byte) (res [][]byte
 }
 
 // all ints (e.g. int8, int16, int, int32, int64) are stored as int64
-func (this ValueGetter) GetInt(key string, def ...int) int {
+func (vg ValueGetter) GetInt(key string, def ...int) int {
 	var i64 int64
 	if len(def) > 0 {
 		i64 = int64(def[0])
 	}
-	return int(this.GetInt64(key, i64))
+	return int(vg.GetInt64(key, i64))
 }
 
-func (this ValueGetter) GetIntSlice(key string, def ...[]int) (res []int) {
+func (vg ValueGetter) GetIntSlice(key string, def ...[]int) (res []int) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []int:
 		res = v
 	case []int64:
@@ -501,20 +501,20 @@ func (this ValueGetter) GetIntSlice(key string, def ...[]int) (res []int) {
 	return
 }
 
-func (this ValueGetter) GetInt8(key string, def ...int8) int8 {
+func (vg ValueGetter) GetInt8(key string, def ...int8) int8 {
 	var i64 int64
 	if len(def) > 0 {
 		i64 = int64(def[0])
 	}
-	return int8(this.GetInt64(key, i64))
+	return int8(vg.GetInt64(key, i64))
 }
 
-func (this ValueGetter) GetInt8Slice(key string, def ...[]int8) (res []int8) {
+func (vg ValueGetter) GetInt8Slice(key string, def ...[]int8) (res []int8) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []int8:
 		res = v
 	case []int64:
@@ -537,20 +537,20 @@ func (this ValueGetter) GetInt8Slice(key string, def ...[]int8) (res []int8) {
 	return
 }
 
-func (this ValueGetter) GetInt16(key string, def ...int16) int16 {
+func (vg ValueGetter) GetInt16(key string, def ...int16) int16 {
 	var i64 int64
 	if len(def) > 0 {
 		i64 = int64(def[0])
 	}
-	return int16(this.GetInt64(key, i64))
+	return int16(vg.GetInt64(key, i64))
 }
 
-func (this ValueGetter) GetInt16Slice(key string, def ...[]int16) (res []int16) {
+func (vg ValueGetter) GetInt16Slice(key string, def ...[]int16) (res []int16) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []int16:
 		res = v
 	case []int64:
@@ -573,20 +573,20 @@ func (this ValueGetter) GetInt16Slice(key string, def ...[]int16) (res []int16) 
 	return
 }
 
-func (this ValueGetter) GetInt32(key string, def ...int32) int32 {
+func (vg ValueGetter) GetInt32(key string, def ...int32) int32 {
 	var i64 int64
 	if len(def) > 0 {
 		i64 = int64(def[0])
 	}
-	return int32(this.GetInt64(key, i64))
+	return int32(vg.GetInt64(key, i64))
 }
 
-func (this ValueGetter) GetInt32Slice(key string, def ...[]int32) (res []int32) {
+func (vg ValueGetter) GetInt32Slice(key string, def ...[]int32) (res []int32) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []int32:
 		res = v
 	case []int64:
@@ -609,24 +609,24 @@ func (this ValueGetter) GetInt32Slice(key string, def ...[]int32) (res []int32) 
 	return
 }
 
-func (this ValueGetter) GetInt64(key string, def ...int64) (res int64) {
+func (vg ValueGetter) GetInt64(key string, def ...int64) (res int64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if tint64, err := CastInt64(this.Get(key)); err == nil {
+	if tint64, err := CastInt64(vg.Get(key)); err == nil {
 		res = tint64
 	}
 
 	return
 }
 
-func (this ValueGetter) GetInt64Slice(key string, def ...[]int64) (res []int64) {
+func (vg ValueGetter) GetInt64Slice(key string, def ...[]int64) (res []int64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []int64:
 		res = v
 	case []interface{}:
@@ -644,20 +644,20 @@ func (this ValueGetter) GetInt64Slice(key string, def ...[]int64) (res []int64) 
 	return
 }
 
-func (this ValueGetter) GetUint(key string, def ...uint) uint {
+func (vg ValueGetter) GetUint(key string, def ...uint) uint {
 	var ui64 uint64
 	if len(def) > 0 {
 		ui64 = uint64(def[0])
 	}
-	return uint(this.GetUint64(key, ui64))
+	return uint(vg.GetUint64(key, ui64))
 }
 
-func (this ValueGetter) GetUintSlice(key string, def ...[]uint) (res []uint) {
+func (vg ValueGetter) GetUintSlice(key string, def ...[]uint) (res []uint) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []uint:
 		res = v
 	case []int64:
@@ -685,20 +685,20 @@ func (this ValueGetter) GetUintSlice(key string, def ...[]uint) (res []uint) {
 	return
 }
 
-func (this ValueGetter) GetUint8(key string, def ...uint8) uint8 {
+func (vg ValueGetter) GetUint8(key string, def ...uint8) uint8 {
 	var ui64 uint64
 	if len(def) > 0 {
 		ui64 = uint64(def[0])
 	}
-	return uint8(this.GetUint64(key, ui64))
+	return uint8(vg.GetUint64(key, ui64))
 }
 
-func (this ValueGetter) GetUint8Slice(key string, def ...[]uint8) (res []uint8) {
+func (vg ValueGetter) GetUint8Slice(key string, def ...[]uint8) (res []uint8) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []uint8:
 		res = v
 	case []int64:
@@ -726,20 +726,20 @@ func (this ValueGetter) GetUint8Slice(key string, def ...[]uint8) (res []uint8) 
 	return
 }
 
-func (this ValueGetter) GetUint16(key string, def ...uint16) uint16 {
+func (vg ValueGetter) GetUint16(key string, def ...uint16) uint16 {
 	var ui64 uint64
 	if len(def) > 0 {
 		ui64 = uint64(def[0])
 	}
-	return uint16(this.GetUint64(key, ui64))
+	return uint16(vg.GetUint64(key, ui64))
 }
 
-func (this ValueGetter) GetUint16Slice(key string, def ...[]uint16) (res []uint16) {
+func (vg ValueGetter) GetUint16Slice(key string, def ...[]uint16) (res []uint16) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []uint16:
 		res = v
 	case []int64:
@@ -767,20 +767,20 @@ func (this ValueGetter) GetUint16Slice(key string, def ...[]uint16) (res []uint1
 	return
 }
 
-func (this ValueGetter) GetUint32(key string, def ...uint32) uint32 {
+func (vg ValueGetter) GetUint32(key string, def ...uint32) uint32 {
 	var ui64 uint64
 	if len(def) > 0 {
 		ui64 = uint64(def[0])
 	}
-	return uint32(this.GetUint64(key, ui64))
+	return uint32(vg.GetUint64(key, ui64))
 }
 
-func (this ValueGetter) GetUint32Slice(key string, def ...[]uint32) (res []uint32) {
+func (vg ValueGetter) GetUint32Slice(key string, def ...[]uint32) (res []uint32) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []uint32:
 		res = v
 	case []int64:
@@ -808,24 +808,24 @@ func (this ValueGetter) GetUint32Slice(key string, def ...[]uint32) (res []uint3
 	return
 }
 
-func (this ValueGetter) GetUint64(key string, def ...uint64) (res uint64) {
+func (vg ValueGetter) GetUint64(key string, def ...uint64) (res uint64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if tuint64, err := CastUint64(this.Get(key)); err == nil {
+	if tuint64, err := CastUint64(vg.Get(key)); err == nil {
 		res = tuint64
 	}
 
 	return
 }
 
-func (this ValueGetter) GetUint64Slice(key string, def ...[]uint64) (res []uint64) {
+func (vg ValueGetter) GetUint64Slice(key string, def ...[]uint64) (res []uint64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []uint64:
 		res = v
 	case []int64:
@@ -848,20 +848,20 @@ func (this ValueGetter) GetUint64Slice(key string, def ...[]uint64) (res []uint6
 	return
 }
 
-func (this ValueGetter) GetFloat32(key string, def ...float32) float32 {
+func (vg ValueGetter) GetFloat32(key string, def ...float32) float32 {
 	var f64 float64
 	if len(def) > 0 {
 		f64 = float64(def[0])
 	}
-	return float32(this.GetFloat64(key, f64))
+	return float32(vg.GetFloat64(key, f64))
 }
 
-func (this ValueGetter) GetFloat32Slice(key string, def ...[]float32) (res []float32) {
+func (vg ValueGetter) GetFloat32Slice(key string, def ...[]float32) (res []float32) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []float32:
 		res = v
 	case []float64:
@@ -884,24 +884,24 @@ func (this ValueGetter) GetFloat32Slice(key string, def ...[]float32) (res []flo
 	return
 }
 
-func (this ValueGetter) GetFloat64(key string, def ...float64) (res float64) {
+func (vg ValueGetter) GetFloat64(key string, def ...float64) (res float64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	if tfloat64, err := CastFloat64(this.Get(key)); err == nil {
+	if tfloat64, err := CastFloat64(vg.Get(key)); err == nil {
 		res = tfloat64
 	}
 
 	return
 }
 
-func (this ValueGetter) GetFloat64Slice(key string, def ...[]float64) (res []float64) {
+func (vg ValueGetter) GetFloat64Slice(key string, def ...[]float64) (res []float64) {
 	if len(def) > 0 {
 		res = def[0]
 	}
 
-	switch v := this.Get(key).(type) {
+	switch v := vg.Get(key).(type) {
 	case []float64:
 		res = v
 	case []interface{}:

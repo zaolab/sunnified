@@ -28,7 +28,7 @@ type MessageEncoder struct {
 	i int
 }
 
-func (this *MessageEncoder) Write(p []byte) (int, error) {
+func (me *MessageEncoder) Write(p []byte) (int, error) {
 	var (
 		b    byte
 		iscr bool
@@ -37,10 +37,10 @@ func (this *MessageEncoder) Write(p []byte) (int, error) {
 		lp   int
 	)
 
-	if lb, lp = len(this.b), len(p); this.b == nil || cap(this.b)-lb < lp {
+	if lb, lp = len(me.b), len(p); me.b == nil || cap(me.b)-lb < lp {
 		newb := make([]byte, lb, lb+lp*3)
-		copy(newb, this.b)
-		this.b = newb
+		copy(newb, me.b)
+		me.b = newb
 	}
 
 	for _, b = range p {
@@ -49,65 +49,65 @@ func (this *MessageEncoder) Write(p []byte) (int, error) {
 			iscr = true
 			continue
 		case b == '\n' || iscr:
-			this.insertNl(issp)
+			me.insertNl(issp)
 			iscr = false
 			issp = false
 		case b == ' ' || b == '\t' || (b >= '!' && b <= '~' && b != '='):
-			if this.i+1 >= lenlimit {
-				this.b = append(this.b, softNl...)
-				this.i = 0
+			if me.i+1 >= lenlimit {
+				me.b = append(me.b, softNl...)
+				me.i = 0
 			}
-			this.b = append(this.b, b)
-			this.i += 1
+			me.b = append(me.b, b)
+			me.i += 1
 			issp = b == ' ' || b == '\t'
 		default:
-			if this.i+3 >= lenlimit {
-				this.b = append(this.b, softNl...)
-				this.i = 0
+			if me.i+3 >= lenlimit {
+				me.b = append(me.b, softNl...)
+				me.i = 0
 			}
-			this.b = append(this.b, encode(b)...)
-			this.i += 3
+			me.b = append(me.b, encode(b)...)
+			me.i += 3
 			issp = false
 		}
 	}
 
 	if iscr {
-		this.insertNl(issp)
+		me.insertNl(issp)
 	}
 
 	return lp, nil
 }
 
-func (this *MessageEncoder) insertNl(issp bool) {
+func (me *MessageEncoder) insertNl(issp bool) {
 	if issp {
-		lastl := len(this.b) - 1
-		chr := this.b[lastl]
+		lastl := len(me.b) - 1
+		chr := me.b[lastl]
 		sp := encode(chr)
 
-		if this.i+2 > lenlimit {
-			this.b[lastl] = softNl[0]
-			this.b = append(this.b, softNl[1], softNl[2], sp[0], sp[1], sp[2])
+		if me.i+2 > lenlimit {
+			me.b[lastl] = softNl[0]
+			me.b = append(me.b, softNl[1], softNl[2], sp[0], sp[1], sp[2])
 		} else {
-			this.b[lastl] = sp[0]
-			this.b = append(this.b, sp[1], sp[2])
+			me.b[lastl] = sp[0]
+			me.b = append(me.b, sp[1], sp[2])
 		}
 	}
 
-	this.b = append(this.b, '\r', '\n')
-	this.i = 0
+	me.b = append(me.b, '\r', '\n')
+	me.i = 0
 }
 
-func (this *MessageEncoder) String() (s string) {
-	this.i = 0
-	s = string(this.b)
-	this.b = nil
+func (me *MessageEncoder) String() (s string) {
+	me.i = 0
+	s = string(me.b)
+	me.b = nil
 	return
 }
 
-func (this *MessageEncoder) Bytes() (b []byte) {
-	this.i = 0
-	b = this.b
-	this.b = nil
+func (me *MessageEncoder) Bytes() (b []byte) {
+	me.i = 0
+	b = me.b
+	me.b = nil
 	return
 }
 

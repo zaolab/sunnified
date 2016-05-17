@@ -2,8 +2,9 @@ package collection
 
 import (
 	"fmt"
-	"github.com/zaolab/sunnified/util"
 	"sync"
+
+	"github.com/zaolab/sunnified/util"
 )
 
 type Dict struct {
@@ -28,50 +29,50 @@ func NewDict(def interface{}, m ...map[interface{}]interface{}) (d *Dict) {
 	return
 }
 
-func (this *Dict) Len() int {
-	this.mutex.Lock()
-	defer this.mutex.RUnlock()
-	return len(this.dict)
+func (d *Dict) Len() int {
+	d.mutex.Lock()
+	defer d.mutex.RUnlock()
+	return len(d.dict)
 }
 
-func (this *Dict) getvalue(key interface{}) (val interface{}, exists bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	val, exists = this.dict[key]
+func (d *Dict) getvalue(key interface{}) (val interface{}, exists bool) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	val, exists = d.dict[key]
 	return
 }
 
-func (this *Dict) MapValue(key interface{}, value interface{}) (val interface{}) {
-	if val = this.Get(key); val != nil && value != nil {
+func (d *Dict) MapValue(key interface{}, value interface{}) (val interface{}) {
+	if val = d.Get(key); val != nil && value != nil {
 		util.MapValue(value, val)
 	}
 	return
 }
 
-func (this *Dict) Set(key interface{}, value interface{}) Dictionary {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.dict[key] = value
-	return this
+func (d *Dict) Set(key interface{}, value interface{}) Dictionary {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	d.dict[key] = value
+	return d
 }
 
-func (this *Dict) SetDefault(key interface{}, value interface{}) Dictionary {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if _, exists := this.dict[key]; !exists {
-		this.dict[key] = value
+func (d *Dict) SetDefault(key interface{}, value interface{}) Dictionary {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	if _, exists := d.dict[key]; !exists {
+		d.dict[key] = value
 	}
-	return this
+	return d
 }
 
-func (this *Dict) Keys() (keys []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Keys() (keys []interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	keys = make([]interface{}, len(this.dict))
+	keys = make([]interface{}, len(d.dict))
 	i := 0
 
-	for key := range this.dict {
+	for key := range d.dict {
 		keys[i] = key
 		i++
 	}
@@ -79,14 +80,14 @@ func (this *Dict) Keys() (keys []interface{}) {
 	return
 }
 
-func (this *Dict) Values() (values []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Values() (values []interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	values = make([]interface{}, len(this.dict))
+	values = make([]interface{}, len(d.dict))
 	i := 0
 
-	for _, val := range this.dict {
+	for _, val := range d.dict {
 		values[i] = val
 		i++
 	}
@@ -94,15 +95,15 @@ func (this *Dict) Values() (values []interface{}) {
 	return
 }
 
-func (this *Dict) KeysValues() (keys []interface{}, values []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) KeysValues() (keys []interface{}, values []interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	keys = make([]interface{}, len(this.dict))
-	values = make([]interface{}, len(this.dict))
+	keys = make([]interface{}, len(d.dict))
+	values = make([]interface{}, len(d.dict))
 	i := 0
 
-	for key, val := range this.dict {
+	for key, val := range d.dict {
 		keys[i] = key
 		values[i] = val
 		i++
@@ -111,14 +112,14 @@ func (this *Dict) KeysValues() (keys []interface{}, values []interface{}) {
 	return
 }
 
-func (this *Dict) Pairs() (pairs [][2]interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Pairs() (pairs [][2]interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	pairs = make([][2]interface{}, len(this.dict))
+	pairs = make([][2]interface{}, len(d.dict))
 	i := 0
 
-	for key, val := range this.dict {
+	for key, val := range d.dict {
 		pairs[i] = [2]interface{}{key, val}
 		i++
 	}
@@ -126,19 +127,19 @@ func (this *Dict) Pairs() (pairs [][2]interface{}) {
 	return
 }
 
-func (this *Dict) HasKey(key interface{}) (exists bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	_, exists = this.dict[key]
+func (d *Dict) HasKey(key interface{}) (exists bool) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	_, exists = d.dict[key]
 	return
 }
 
-func (this *Dict) Contains(values ...interface{}) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Contains(values ...interface{}) bool {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
 	for _, val := range values {
-		if !this.hasValue(val) {
+		if !d.hasValue(val) {
 			return false
 		}
 	}
@@ -146,8 +147,8 @@ func (this *Dict) Contains(values ...interface{}) bool {
 	return true
 }
 
-func (this *Dict) hasValue(value interface{}) bool {
-	for _, val := range this.dict {
+func (d *Dict) hasValue(value interface{}) bool {
+	for _, val := range d.dict {
 		if val == value {
 			return true
 		}
@@ -156,11 +157,11 @@ func (this *Dict) hasValue(value interface{}) bool {
 	return false
 }
 
-func (this *Dict) KeyOf(value interface{}) interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) KeyOf(value interface{}) interface{} {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	for key, val := range this.dict {
+	for key, val := range d.dict {
 		if val == value {
 			return key
 		}
@@ -169,17 +170,17 @@ func (this *Dict) KeyOf(value interface{}) interface{} {
 	return nil
 }
 
-func (this *Dict) KeysOf(value interface{}) (keys []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) KeysOf(value interface{}) (keys []interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	return this.keysOf(value)
+	return d.keysOf(value)
 }
 
-func (this *Dict) keysOf(value interface{}) (keys []interface{}) {
+func (d *Dict) keysOf(value interface{}) (keys []interface{}) {
 	keys = make([]interface{}, 0, 2)
 
-	for key, val := range this.dict {
+	for key, val := range d.dict {
 		if val == value {
 			keys = append(keys, key)
 		}
@@ -188,139 +189,139 @@ func (this *Dict) keysOf(value interface{}) (keys []interface{}) {
 	return
 }
 
-func (this *Dict) RemoveAt(key interface{}) (value interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (d *Dict) RemoveAt(key interface{}) (value interface{}) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	var exists bool
-	if value, exists = this.dict[key]; exists {
-		delete(this.dict, key)
+	if value, exists = d.dict[key]; exists {
+		delete(d.dict, key)
 	}
 	return value
 }
 
-func (this *Dict) Remove(value interface{}) (keys []interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	keys = this.keysOf(value)
+func (d *Dict) Remove(value interface{}) (keys []interface{}) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	keys = d.keysOf(value)
 	for _, key := range keys {
-		delete(this.dict, key)
+		delete(d.dict, key)
 	}
 	return
 }
 
-func (this *Dict) Pop() (key interface{}, value interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if len(this.dict) > 0 {
-		for key, value = range this.dict {
+func (d *Dict) Pop() (key interface{}, value interface{}) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	if len(d.dict) > 0 {
+		for key, value = range d.dict {
 			break
 		}
-		delete(this.dict, key)
+		delete(d.dict, key)
 	}
 	return
 }
 
-func (this *Dict) Update(m map[interface{}]interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (d *Dict) Update(m map[interface{}]interface{}) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	for k, v := range m {
-		this.dict[k] = v
+		d.dict[k] = v
 	}
 }
 
-func (this *Dict) UpdateDictionary(d Dictionary) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (d *Dict) UpdateDictionary(dt Dictionary) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	var key, value interface{}
-	for iter := d.Iterator(); iter.Next(&key, &value); {
-		this.dict[key] = value
+	for iter := dt.Iterator(); iter.Next(&key, &value); {
+		d.dict[key] = value
 	}
 }
 
-func (this *Dict) UpdateDict(d *Dict) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (d *Dict) UpdateDict(dt *Dict) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	dt.mutex.RLock()
+	defer dt.mutex.RUnlock()
+
+	for k, v := range dt.dict {
+		d.dict[k] = v
+	}
+}
+
+func (d *Dict) UpdateOrderedDict(od *OrderedDict) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+
+	for k, v := range od.prevchain {
+		d.dict[k] = v.next.value
+	}
+}
+
+func (d *Dict) ToMap() map[interface{}]interface{} {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
-
-	for k, v := range d.dict {
-		this.dict[k] = v
-	}
+	return d.toMap()
 }
 
-func (this *Dict) UpdateOrderedDict(d *OrderedDict) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-
-	for k, v := range d.prevchain {
-		this.dict[k] = v.next.value
-	}
-}
-
-func (this *Dict) ToMap() map[interface{}]interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.toMap()
-}
-
-func (this *Dict) toMap() (m map[interface{}]interface{}) {
+func (d *Dict) toMap() (m map[interface{}]interface{}) {
 	m = make(map[interface{}]interface{})
-	for k, v := range this.dict {
+	for k, v := range d.dict {
 		m[k] = v
 	}
 	return
 }
 
-func (this *Dict) Clone() *Dict {
+func (d *Dict) Clone() *Dict {
 	return &Dict{
-		dict:  this.ToMap(),
-		def:   this.def,
+		dict:  d.ToMap(),
+		def:   d.def,
 		mutex: &sync.RWMutex{},
 	}
 }
 
-func (this *Dict) String() string {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return fmt.Sprintf("%v", this.dict)
+func (d *Dict) String() string {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return fmt.Sprintf("%v", d.dict)
 }
 
-func (this *Dict) lock() {
-	this.mutex.Lock()
+func (d *Dict) lock() {
+	d.mutex.Lock()
 }
 
-func (this *Dict) unlock() {
-	this.mutex.Unlock()
+func (d *Dict) unlock() {
+	d.mutex.Unlock()
 }
 
-func (this *Dict) Clear() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.dict = make(map[interface{}]interface{})
+func (d *Dict) Clear() {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	d.dict = make(map[interface{}]interface{})
 }
 
-func (this *Dict) Transaction(f func(ExtendedDictionary) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (d *Dict) Transaction(f func(ExtendedDictionary) bool) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 
 	clone := &Dict{
-		dict:  this.toMap(),
-		def:   this.def,
+		dict:  d.toMap(),
+		def:   d.def,
 		mutex: &sync.RWMutex{},
 	}
 
 	if ok := f(clone); ok {
-		this.dict = clone.ToMap()
+		d.dict = clone.ToMap()
 	}
 }
 
-func (this *Dict) IsMatch(f func(interface{}) bool) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) IsMatch(f func(interface{}) bool) bool {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	for _, v := range this.dict {
+	for _, v := range d.dict {
 		if f(v) {
 			return true
 		}
@@ -329,11 +330,11 @@ func (this *Dict) IsMatch(f func(interface{}) bool) bool {
 	return false
 }
 
-func (this *Dict) Match(f func(interface{}) bool) (interface{}, interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Match(f func(interface{}) bool) (interface{}, interface{}) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	for k, v := range this.dict {
+	for k, v := range d.dict {
 		if f(v) {
 			return k, v
 		}
@@ -342,20 +343,20 @@ func (this *Dict) Match(f func(interface{}) bool) (interface{}, interface{}) {
 	return nil, nil
 }
 
-func (this *Dict) Foreach(f func(interface{}, interface{}) bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (d *Dict) Foreach(f func(interface{}, interface{}) bool) {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 
-	for k, v := range this.dict {
+	for k, v := range d.dict {
 		if !f(k, v) {
 			break
 		}
 	}
 }
 
-func (this *Dict) Iterator() (di Iterator) {
+func (d *Dict) Iterator() (di Iterator) {
 	di = &DictIterator{
-		dict: this.dict,
+		dict: d.dict,
 	}
 	return
 }
@@ -369,42 +370,42 @@ type DictIterator struct {
 	initd  bool
 }
 
-func (this *DictIterator) init() {
-	if !this.initd {
-		this.initd = true
-		this.kvchan = make(chan [2]interface{})
+func (di *DictIterator) init() {
+	if !di.initd {
+		di.initd = true
+		di.kvchan = make(chan [2]interface{})
 
 		go func() {
 			defer func() {
 				recover()
-				close(this.kvchan)
+				close(di.kvchan)
 			}()
 
-			for k, v := range this.dict {
-				if this.reset {
+			for k, v := range di.dict {
+				if di.reset {
 					break
 				}
 				var keyval = [2]interface{}{k, v}
-				this.kvchan <- keyval
+				di.kvchan <- keyval
 			}
 		}()
 	}
 }
 
-func (this *DictIterator) Next(val ...interface{}) bool {
-	if !this.initd {
-		this.init()
+func (di *DictIterator) Next(val ...interface{}) bool {
+	if !di.initd {
+		di.init()
 	}
 
-	keyval, ok := <-this.kvchan
+	keyval, ok := <-di.kvchan
 
 	if !ok {
-		this.curkv = [2]interface{}{nil, nil}
-		this.initd = false
+		di.curkv = [2]interface{}{nil, nil}
+		di.initd = false
 		return false
 	}
 
-	this.curkv = keyval
+	di.curkv = keyval
 
 	if lenval := len(val); lenval == 1 {
 		util.MapValue(val[0], keyval[1])
@@ -416,20 +417,20 @@ func (this *DictIterator) Next(val ...interface{}) bool {
 	return true
 }
 
-func (this *DictIterator) Get() (interface{}, interface{}) {
-	return this.curkv[0], this.curkv[1]
+func (di *DictIterator) Get() (interface{}, interface{}) {
+	return di.curkv[0], di.curkv[1]
 }
 
-func (this *DictIterator) Reset() {
-	this.reset = true
-	_, _ = <-this.kvchan
+func (di *DictIterator) Reset() {
+	di.reset = true
+	_, _ = <-di.kvchan
 
 	for true {
-		_, ok := <-this.kvchan
+		_, ok := <-di.kvchan
 		if !ok {
 			break
 		}
 	}
 
-	this.reset = false
+	di.reset = false
 }

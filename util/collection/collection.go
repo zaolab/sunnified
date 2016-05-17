@@ -1,8 +1,9 @@
 package collection
 
 import (
-	"github.com/zaolab/sunnified/util"
 	"reflect"
+
+	"github.com/zaolab/sunnified/util"
 )
 
 // usage
@@ -223,9 +224,7 @@ func IsMatch(slice interface{}, f func(interface{}) bool) bool {
 	var sliceval = reflect.ValueOf(slice)
 
 	switch sliceval.Kind() {
-	case reflect.Array:
-		fallthrough
-	case reflect.Slice:
+	case reflect.Array, reflect.Slice:
 		for i, lenslice := 0, sliceval.Len(); i < lenslice; i++ {
 			if f(sliceval.Index(i).Interface()) {
 				return true
@@ -247,9 +246,7 @@ func Match(slice interface{}, f func(interface{}) bool) (interface{}, interface{
 	var sliceval = reflect.ValueOf(slice)
 
 	switch sliceval.Kind() {
-	case reflect.Array:
-		fallthrough
-	case reflect.Slice:
+	case reflect.Array, reflect.Slice:
 		for i, lenslice := 0, sliceval.Len(); i < lenslice; i++ {
 			val := sliceval.Index(i).Interface()
 			if f(val) {
@@ -273,9 +270,7 @@ func Foreach(slice interface{}, f func(interface{}, interface{}) bool) {
 	var sliceval = reflect.ValueOf(slice)
 
 	switch sliceval.Kind() {
-	case reflect.Array:
-		fallthrough
-	case reflect.Slice:
+	case reflect.Array, reflect.Slice:
 		for i, lenslice := 0, sliceval.Len(); i < lenslice; i++ {
 			if !f(i, sliceval.Index(i).Interface()) {
 				break

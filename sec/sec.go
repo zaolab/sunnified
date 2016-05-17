@@ -76,7 +76,7 @@ type CsrfRequestBody struct {
 // SetCSRFToken returns a CsrfRequestBody containing the name and value to be used
 // as a query string or form input that can be verified by VerifyCSRFToken.
 // Additionally, a cookie will be set (if ResponseWriter is not nil) to cross authenticate validity of token data if non exists
-func (this *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CsrfRequestBody) {
+func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CsrfRequestBody) {
 	var (
 		randToken   []byte
 		msg         []byte
@@ -85,15 +85,15 @@ func (this *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb Csr
 		// the current rolling global token.
 		// this token is the share for the entire application
 		// it rolls over to a new token every "csrf-token-life"
-		currentToken = this.csrfCurrentToken(tstamp)
-		ckie, err    = r.Cookie(this.config.Cookiename)
+		currentToken = cg.csrfCurrentToken(tstamp)
+		ckie, err    = r.Cookie(cg.config.Cookiename)
 	)
 
 	// gets the cookie containing the random token generated
 	// the random token will be shared for all requests from the same machine/browser
 	// this is a very simple mechanism for unique user identification
 	if err == nil {
-		randToken, err = AesCtrDecryptBase64(this.config.Key, ckie.Value)
+		randToken, err = AesCtrDecryptBase64(cg.config.Key, ckie.Value)
 	}
 	// if there are no random token from the cookie,
 	// generate a new one ourselves.
@@ -138,16 +138,16 @@ func (this *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb Csr
 	msg = append(msg[0:CSRF_TIMESTAMP_LEN], randToken...)
 	msg = append(msg, currentToken...)
 
-	if value, err := AesCtrEncryptBase64(this.config.Key, msg); err == nil {
+	if value, err := AesCtrEncryptBase64(cg.config.Key, msg); err == nil {
 		if writeCookie {
-			enc, err := AesCtrEncryptBase64(this.config.Key, randToken)
+			enc, err := AesCtrEncryptBase64(cg.config.Key, randToken)
 
 			if err != nil {
 				return
 			}
 
 			ckie = &http.Cookie{
-				Name:  this.config.Cookiename,
+				Name:  cg.config.Cookiename,
 				Value: enc,
 				Path:  "/",
 			}
@@ -156,7 +156,7 @@ func (this *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb Csr
 			}
 		}
 
-		crb.Name = this.config.Reqname
+		crb.Name = cg.config.Reqname
 		crb.Value = value
 		crb.Cookie = ckie
 		crb.Ok = true
@@ -166,26 +166,26 @@ func (this *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb Csr
 }
 
 // VerifyCSRFToken checks whether the request r includes a valid CSRF token
-func (this *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
+func (cg *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 	var token string
 
-	if token = r.Header.Get(this.config.Reqname); token != "" {
+	if token = r.Header.Get(cg.config.Reqname); token != "" {
 		// TODO: for cross domain, the request will first perform an OPTIONS
 		// with Access-Control-Request-Headers: X-XSRF-TOKEN
 		// we gotten respond with Access-Control-Allow-Headers: X-XSRF-TOKEN somehow
 		// if router doesn't respond by mirroring the request
-		if ckie, err := r.Cookie(this.config.Cookiename); err == nil {
+		if ckie, err := r.Cookie(cg.config.Cookiename); err == nil {
 			valid = token == ckie.Value
 		}
 	} else {
 		r.ParseForm()
-		token = r.Form.Get(this.config.Reqname)
+		token = r.Form.Get(cg.config.Reqname)
 
 		if token == "" {
 			return
 		}
 
-		result, err := AesCtrDecryptBase64(this.config.Key, token)
+		result, err := AesCtrDecryptBase64(cg.config.Key, token)
 
 		if err != nil || len(result) <= (CSRF_TIMESTAMP_LEN+CSRF_RAND_TOKEN_LEN) {
 			return
@@ -217,13 +217,13 @@ func (this *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 		tstamp := time.Now().Unix()
 
 		// check whether request token has already expired
-		if (tcreated64+int64(this.config.Tokenlife)) < tstamp || tcreated64 > tstamp {
+		if (tcreated64+int64(cg.config.Tokenlife)) < tstamp || tcreated64 > tstamp {
 			return
 		}
 
 		// cookie authentication of csrf token is needed to ensure each machine has unique token
-		if ckie, err := r.Cookie(this.config.Cookiename); err == nil {
-			dec, err := AesCtrDecryptBase64(this.config.Key, ckie.Value)
+		if ckie, err := r.Cookie(cg.config.Cookiename); err == nil {
+			dec, err := AesCtrDecryptBase64(cg.config.Key, ckie.Value)
 
 			if err != nil || !bytes.Equal(dec, ckietoken) {
 				return
@@ -232,13 +232,13 @@ func (this *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 			return
 		}
 
-		valid = bytes.Equal(reqtoken, this.csrfCurrentToken(tstamp)) || bytes.Equal(reqtoken, this.csrfPrevToken(tstamp))
+		valid = bytes.Equal(reqtoken, cg.csrfCurrentToken(tstamp)) || bytes.Equal(reqtoken, cg.csrfPrevToken(tstamp))
 	}
 
 	return
 }
 
-func (this *CSRFGate) csrfCurrentToken(t ...int64) []byte {
+func (cg *CSRFGate) csrfCurrentToken(t ...int64) []byte {
 	var tnow int64
 
 	if len(t) > 0 {
@@ -246,15 +246,15 @@ func (this *CSRFGate) csrfCurrentToken(t ...int64) []byte {
 	} else {
 		tnow = time.Now().Unix()
 	}
-	iteration := tnow / int64(this.config.Tokenlife)
-	return this.csrfIterToken(iteration)
+	iteration := tnow / int64(cg.config.Tokenlife)
+	return cg.csrfIterToken(iteration)
 }
 
-func (this *CSRFGate) csrfCurrentTokenString(t ...int64) string {
-	return string(this.csrfCurrentToken(t...))
+func (cg *CSRFGate) csrfCurrentTokenString(t ...int64) string {
+	return string(cg.csrfCurrentToken(t...))
 }
 
-func (this *CSRFGate) csrfPrevToken(t ...int64) []byte {
+func (cg *CSRFGate) csrfPrevToken(t ...int64) []byte {
 	var tnow int64
 
 	if len(t) > 0 {
@@ -263,25 +263,25 @@ func (this *CSRFGate) csrfPrevToken(t ...int64) []byte {
 		tnow = time.Now().Unix()
 	}
 
-	iteration := tnow / int64(this.config.Tokenlife)
-	return this.csrfIterToken(iteration - 1)
+	iteration := tnow / int64(cg.config.Tokenlife)
+	return cg.csrfIterToken(iteration - 1)
 }
 
-func (this *CSRFGate) csrfPrevTokenString(t ...int64) string {
-	return string(this.csrfPrevToken(t...))
+func (cg *CSRFGate) csrfPrevTokenString(t ...int64) string {
+	return string(cg.csrfPrevToken(t...))
 }
 
-func (this *CSRFGate) csrfIterToken(iteration int64) []byte {
+func (cg *CSRFGate) csrfIterToken(iteration int64) []byte {
 	itertoken := strconv.FormatInt(iteration, 10)
-	h := hmac.New(sha1.New, this.config.Token)
+	h := hmac.New(sha1.New, cg.config.Token)
 	h.Write([]byte(itertoken))
 	hash := make([]byte, 0, h.Size())
 	hash = h.Sum(hash)
 	return hash
 }
 
-func (this *CSRFGate) csrfIterTokenString(iteration int64) string {
-	return string(this.csrfIterToken(iteration))
+func (cg *CSRFGate) csrfIterTokenString(iteration int64) string {
+	return string(cg.csrfIterToken(iteration))
 }
 
 // GenRandomBytes return a slice of random bytes of length l

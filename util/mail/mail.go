@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/zaolab/sunnified/util/validate"
 	"io/ioutil"
 	"mime"
 	"mime/multipart"
@@ -16,15 +15,17 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/zaolab/sunnified/util/validate"
 )
 
 const DEFAULT_ATTACHMENT_LIMIT = 25 * 1024 * 1024
 const MAX_INT = int64(^uint64(0) >> 1)
 
-var ErrEmailInvalid = errors.New("Invalid email address")
-var ErrFileIsDir = errors.New("Cannot attach directory")
-var ErrFileInvalid = errors.New("Invalid file")
-var ErrAttachmentExceedLimit = errors.New("Attachment is bigger than limit")
+var ErrEmailInvalid = errors.New("invalid email address")
+var ErrFileIsDir = errors.New("cannot attach directory")
+var ErrFileInvalid = errors.New("invalid file")
+var ErrAttachmentExceedLimit = errors.New("attachment is bigger than limit")
 
 var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 
@@ -39,9 +40,9 @@ func NewMail() *Mail {
 	return &Mail{}
 }
 
-func (this Addresses) String() string {
-	b := make([]string, len(this))
-	for i, a := range this {
+func (ad Addresses) String() string {
+	b := make([]string, len(ad))
+	for i, a := range ad {
 		b[i] = a.String()
 	}
 	return strings.Join(b, ", ")
@@ -63,237 +64,237 @@ type Mail struct {
 	attsize  int64
 }
 
-func (this *Mail) SetHeader(key, value string) {
-	if this.headers == nil {
-		this.headers = make(textproto.MIMEHeader)
+func (m *Mail) SetHeader(key, value string) {
+	if m.headers == nil {
+		m.headers = make(textproto.MIMEHeader)
 	}
 
-	this.headers.Set(key, value)
+	m.headers.Set(key, value)
 }
 
-func (this *Mail) AddHeader(key, value string) {
-	if this.headers == nil {
-		this.headers = make(textproto.MIMEHeader)
+func (m *Mail) AddHeader(key, value string) {
+	if m.headers == nil {
+		m.headers = make(textproto.MIMEHeader)
 	}
 
-	this.headers.Add(key, value)
+	m.headers.Add(key, value)
 }
 
-func (this *Mail) GetHeader(key string) string {
-	if this.headers == nil {
-		this.headers = make(textproto.MIMEHeader)
+func (m *Mail) GetHeader(key string) string {
+	if m.headers == nil {
+		m.headers = make(textproto.MIMEHeader)
 		return ""
 	}
 
-	return this.headers.Get(key)
+	return m.headers.Get(key)
 }
 
-func (this *Mail) DelHeader(key string) {
-	if this.headers == nil {
-		this.headers = make(textproto.MIMEHeader)
+func (m *Mail) DelHeader(key string) {
+	if m.headers == nil {
+		m.headers = make(textproto.MIMEHeader)
 		return
 	}
 
-	this.headers.Del(key)
+	m.headers.Del(key)
 }
 
-func (this *Mail) AttachmentLimit() int64 {
-	if this.attlimit == 0 {
-		this.attlimit = DEFAULT_ATTACHMENT_LIMIT
-	} else if this.attlimit == -1 {
-		this.attlimit = MAX_INT
+func (m *Mail) AttachmentLimit() int64 {
+	if m.attlimit == 0 {
+		m.attlimit = DEFAULT_ATTACHMENT_LIMIT
+	} else if m.attlimit == -1 {
+		m.attlimit = MAX_INT
 	}
 
-	return this.attlimit
+	return m.attlimit
 }
 
-func (this *Mail) SetAttachmentLimit(l int64) {
-	this.attlimit = l
+func (m *Mail) SetAttachmentLimit(l int64) {
+	m.attlimit = l
 }
 
-func (this *Mail) SetTo(email string, name string) error {
+func (m *Mail) SetTo(email string, name string) error {
 	if validate.IsEmail(email) {
-		this.to = Addresses{mail.Address{Name: name, Address: email}}
+		m.to = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) AddTo(email, name string) error {
+func (m *Mail) AddTo(email, name string) error {
 	if validate.IsEmail(email) {
-		this.to = append(this.to, mail.Address{Name: name, Address: email})
+		m.to = append(m.to, mail.Address{Name: name, Address: email})
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) To() Addresses {
-	tmp := make(Addresses, len(this.to))
-	copy(tmp, this.to)
+func (m *Mail) To() Addresses {
+	tmp := make(Addresses, len(m.to))
+	copy(tmp, m.to)
 	return tmp
 }
 
-func (this *Mail) SetFrom(email, name string) error {
+func (m *Mail) SetFrom(email, name string) error {
 	if validate.IsEmail(email) {
-		this.from = mail.Address{Name: name, Address: email}
+		m.from = mail.Address{Name: name, Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) From() mail.Address {
-	return this.from
+func (m *Mail) From() mail.Address {
+	return m.from
 }
 
-func (this *Mail) SetCc(email, name string) error {
+func (m *Mail) SetCc(email, name string) error {
 	if validate.IsEmail(email) {
-		this.cc = Addresses{mail.Address{Name: name, Address: email}}
+		m.cc = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) AddCc(email, name string) error {
+func (m *Mail) AddCc(email, name string) error {
 	if validate.IsEmail(email) {
-		this.cc = append(this.cc, mail.Address{Name: name, Address: email})
+		m.cc = append(m.cc, mail.Address{Name: name, Address: email})
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) Cc() Addresses {
-	tmp := make(Addresses, len(this.cc))
-	copy(tmp, this.cc)
+func (m *Mail) Cc() Addresses {
+	tmp := make(Addresses, len(m.cc))
+	copy(tmp, m.cc)
 	return tmp
 }
 
-func (this *Mail) SetBcc(email, name string) error {
+func (m *Mail) SetBcc(email, name string) error {
 	if validate.IsEmail(email) {
 		a := mail.Address{Name: name, Address: email}
-		this.bcc = Addresses{a}
+		m.bcc = Addresses{a}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) AddBcc(email, name string) error {
+func (m *Mail) AddBcc(email, name string) error {
 	if validate.IsEmail(email) {
 		a := mail.Address{Name: name, Address: email}
-		this.bcc = append(this.bcc, a)
+		m.bcc = append(m.bcc, a)
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) Bcc() Addresses {
-	tmp := make(Addresses, len(this.bcc))
-	copy(tmp, this.bcc)
+func (m *Mail) Bcc() Addresses {
+	tmp := make(Addresses, len(m.bcc))
+	copy(tmp, m.bcc)
 	return tmp
 }
 
-func (this *Mail) SetReplyTo(email, name string) error {
+func (m *Mail) SetReplyTo(email, name string) error {
 	if validate.IsEmail(email) {
-		this.replyto = mail.Address{Name: name, Address: email}
+		m.replyto = mail.Address{Name: name, Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) ReplyTo() mail.Address {
-	return this.replyto
+func (m *Mail) ReplyTo() mail.Address {
+	return m.replyto
 }
 
-func (this *Mail) SetBounceTo(email string) error {
+func (m *Mail) SetBounceTo(email string) error {
 	if validate.IsEmail(email) {
-		this.bounce = mail.Address{Name: "", Address: email}
+		m.bounce = mail.Address{Name: "", Address: email}
 		return nil
 	} else {
 		return ErrEmailInvalid
 	}
 }
 
-func (this *Mail) BounceTo() mail.Address {
-	if this.bounce.Address == "" {
-		return this.from
+func (m *Mail) BounceTo() mail.Address {
+	if m.bounce.Address == "" {
+		return m.from
 	} else {
-		return this.bounce
+		return m.bounce
 	}
 }
 
-func (this *Mail) SetSubject(subj string) {
+func (m *Mail) SetSubject(subj string) {
 	// diff golang version output diff string if missiong email address
 	// using a constant email address, it is then possible to determine the output
 	s := mail.Address{Name: subj, Address: "a@abc.com"}
 	subj = s.String()
-	this.subject = strings.TrimSpace(strings.TrimSuffix(subj, "<a@abc.com>"))
+	m.subject = strings.TrimSpace(strings.TrimSuffix(subj, "<a@abc.com>"))
 }
 
-func (this *Mail) Subject() string {
-	return this.subject
+func (m *Mail) Subject() string {
+	return m.subject
 }
 
-func (this *Mail) SetMessage(mimetype, msg string) {
-	if this.msg == nil {
-		this.msg = make(map[string]string)
+func (m *Mail) SetMessage(mimetype, msg string) {
+	if m.msg == nil {
+		m.msg = make(map[string]string)
 	}
-	this.msg[mimetype] = msg
+	m.msg[mimetype] = msg
 }
 
-func (this *Mail) SetTextMessage(msg string) {
-	this.SetMessage("text/plain", msg)
+func (m *Mail) SetTextMessage(msg string) {
+	m.SetMessage("text/plain", msg)
 }
 
-func (this *Mail) SetHTMLMessage(msg string) {
-	this.SetMessage("text/html", msg)
+func (m *Mail) SetHTMLMessage(msg string) {
+	m.SetMessage("text/html", msg)
 }
 
-func (this *Mail) AppendMessage(mimetype, msg string) {
-	if this.msg == nil {
-		this.msg = make(map[string]string)
+func (m *Mail) AppendMessage(mimetype, msg string) {
+	if m.msg == nil {
+		m.msg = make(map[string]string)
 	}
 
-	if _, exists := this.msg[mimetype]; exists {
-		this.msg[mimetype] += msg
+	if _, exists := m.msg[mimetype]; exists {
+		m.msg[mimetype] += msg
 	} else {
-		this.msg[mimetype] = msg
+		m.msg[mimetype] = msg
 	}
 }
 
-func (this *Mail) AppendTextMessage(msg string) {
-	this.AppendMessage("text/plain", msg)
+func (m *Mail) AppendTextMessage(msg string) {
+	m.AppendMessage("text/plain", msg)
 }
 
-func (this *Mail) AppendHTMLMessage(msg string) {
-	this.AppendMessage("text/html", msg)
+func (m *Mail) AppendHTMLMessage(msg string) {
+	m.AppendMessage("text/html", msg)
 }
 
-func (this *Mail) Message() map[string]string {
+func (m *Mail) Message() map[string]string {
 	tmp := make(map[string]string)
-	for k, v := range this.msg {
+	for k, v := range m.msg {
 		tmp[k] = v
 	}
 	return tmp
 }
 
-func (this *Mail) AttachFile(fpath string) (err error) {
+func (m *Mail) AttachFile(fpath string) (err error) {
 	var fd *os.File
 
 	if fd, err = os.Open(fpath); err == nil {
-		err = this.AttachFD(fd)
+		err = m.AttachFD(fd)
 	}
 
 	return
 }
 
-func (this *Mail) AttachFD(fd *os.File) error {
+func (m *Mail) AttachFD(fd *os.File) error {
 	if fd == nil {
 		return ErrFileInvalid
 	}
@@ -304,7 +305,7 @@ func (this *Mail) AttachFD(fd *os.File) error {
 	if st, err = fd.Stat(); err == nil {
 		if st.IsDir() {
 			return ErrFileIsDir
-		} else if st.Size()+this.attsize > this.AttachmentLimit() {
+		} else if st.Size()+m.attsize > m.AttachmentLimit() {
 			return ErrAttachmentExceedLimit
 		}
 	} else {
@@ -315,14 +316,14 @@ func (this *Mail) AttachFD(fd *os.File) error {
 
 	if content, err := ioutil.ReadAll(fd); err == nil {
 		b, size := EncodeBase64WithNewLine(content)
-		this.attsize += size
+		m.attsize += size
 
-		if this.attsize > this.AttachmentLimit() {
-			this.attsize -= size
+		if m.attsize > m.AttachmentLimit() {
+			m.attsize -= size
 			return ErrAttachmentExceedLimit
 		}
 
-		this.att = append(this.att, Attachment{
+		m.att = append(m.att, Attachment{
 			Name: fname,
 			Data: b,
 		})
@@ -333,58 +334,58 @@ func (this *Mail) AttachFD(fd *os.File) error {
 	return nil
 }
 
-func (this *Mail) Attach(name string, b []byte) error {
+func (m *Mail) Attach(name string, b []byte) error {
 	size := int64(len(b))
 
-	if size+this.attsize > this.AttachmentLimit() {
+	if size+m.attsize > m.AttachmentLimit() {
 		return ErrAttachmentExceedLimit
 	}
 
 	newb, _ := EncodeBase64WithNewLine(b)
 
-	this.att = append(this.att, Attachment{
+	m.att = append(m.att, Attachment{
 		Name: name,
 		Data: newb,
 	})
 
-	this.attsize += size
+	m.attsize += size
 	return nil
 }
 
-func (this *Mail) Attachments() []Attachment {
-	att := make([]Attachment, len(this.att))
-	copy(att, this.att)
-	return this.att
+func (m *Mail) Attachments() []Attachment {
+	att := make([]Attachment, len(m.att))
+	copy(att, m.att)
+	return m.att
 }
 
-func (this *Mail) String() string {
-	return string(buildMail(this, nil))
+func (m *Mail) String() string {
+	return string(buildMail(m, nil))
 }
 
-func (this *Mail) Bytes() []byte {
-	return buildMail(this, nil)
+func (m *Mail) Bytes() []byte {
+	return buildMail(m, nil)
 }
 
-func (this *Mail) Clone() *Mail {
+func (m *Mail) Clone() *Mail {
 	headers := make(textproto.MIMEHeader)
-	for k, v := range this.headers {
+	for k, v := range m.headers {
 		value := make([]string, len(v))
 		copy(value, v)
 		headers[k] = value
 	}
 
 	return &Mail{
-		to:       this.To(),
-		from:     this.from,
-		cc:       this.Cc(),
-		bcc:      this.Bcc(),
-		msg:      this.Message(),
-		subject:  this.subject,
-		att:      this.Attachments(),
-		attlimit: this.attlimit,
-		attsize:  this.attsize,
+		to:       m.To(),
+		from:     m.from,
+		cc:       m.Cc(),
+		bcc:      m.Bcc(),
+		msg:      m.Message(),
+		subject:  m.subject,
+		att:      m.Attachments(),
+		attlimit: m.attlimit,
+		attsize:  m.attsize,
 		headers:  headers,
-		bounce:   this.bounce,
+		bounce:   m.bounce,
 	}
 }
 

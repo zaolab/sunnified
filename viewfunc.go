@@ -1,16 +1,16 @@
 package sunnified
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/zaolab/sunnified/mvc"
+	"github.com/zaolab/sunnified/util/validate"
 	"github.com/zaolab/sunnified/web"
 	"html/template"
-	"net/http"
-	"github.com/zaolab/sunnified/util/validate"
-	"strings"
-	"encoding/json"
-	"bytes"
 	"math"
+	"net/http"
 	"reflect"
+	"strings"
 )
 
 func init() {
@@ -152,7 +152,7 @@ func setFuncMap(sunctxt *web.Context, vw mvc.View) {
 		fview.SetViewFunc("Limit", func(slice interface{}, limit int) interface{} {
 			refslice := reflect.ValueOf(slice)
 			if (refslice.Kind() == reflect.Slice || refslice.Kind() == reflect.Array) &&
-			refslice.Cap() > limit {
+				refslice.Cap() > limit {
 				slice = refslice.Slice(0, limit).Interface()
 			}
 			return slice

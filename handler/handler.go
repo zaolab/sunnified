@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"github.com/zaolab/sunnified/mvc/controller"
-	"github.com/zaolab/sunnified/router"
-	"github.com/zaolab/sunnified/web"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/zaolab/sunnified/mvc/controller"
+	"github.com/zaolab/sunnified/router"
+	"github.com/zaolab/sunnified/web"
 )
 
 type DynamicHandler struct {
@@ -40,52 +41,52 @@ func NewDefaultDynamicHandler(ctrlgroup *controller.ControllerGroup, action, con
 	}
 }
 
-func (this *DynamicHandler) SetModule(mod string) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.module = mod
+func (dh *DynamicHandler) SetModule(mod string) {
+	dh.mutex.Lock()
+	defer dh.mutex.Unlock()
+	dh.module = mod
 }
 
-func (this *DynamicHandler) SetController(control string) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.controller = control
+func (dh *DynamicHandler) SetController(control string) {
+	dh.mutex.Lock()
+	defer dh.mutex.Unlock()
+	dh.controller = control
 }
 
-func (this *DynamicHandler) SetAction(action string) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.action = action
+func (dh *DynamicHandler) SetAction(action string) {
+	dh.mutex.Lock()
+	defer dh.mutex.Unlock()
+	dh.action = action
 }
 
-func (this *DynamicHandler) Module() string {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.module
+func (dh *DynamicHandler) Module() string {
+	dh.mutex.RLock()
+	defer dh.mutex.RUnlock()
+	return dh.module
 }
 
-func (this *DynamicHandler) Controller() string {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.controller
+func (dh *DynamicHandler) Controller() string {
+	dh.mutex.RLock()
+	defer dh.mutex.RUnlock()
+	return dh.controller
 }
 
-func (this *DynamicHandler) Action() string {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.action
+func (dh *DynamicHandler) Action() string {
+	dh.mutex.RLock()
+	defer dh.mutex.RUnlock()
+	return dh.action
 }
 
-func (this *DynamicHandler) ServeOptions(w http.ResponseWriter, r *http.Request, origin map[string]string) {
-	this.ServeContextOptions(web.NewContext(w, r), origin)
+func (dh *DynamicHandler) ServeOptions(w http.ResponseWriter, r *http.Request, origin map[string]string) {
+	dh.ServeContextOptions(web.NewContext(w, r), origin)
 }
 
-func (this *DynamicHandler) ServeContextOptions(context *web.Context, origin map[string]string) {
+func (dh *DynamicHandler) ServeContextOptions(context *web.Context, origin map[string]string) {
 	router.SetHeaderOrigin(context.Response, context.Request, origin)
 
 	var (
 		header  http.Header                = context.Response.Header()
-		ctrlmgr *controller.ControlManager = this.GetControlManager(context)
+		ctrlmgr *controller.ControlManager = dh.GetControlManager(context)
 		mlist   []string                   = ctrlmgr.AvailableMethodsList()
 	)
 
@@ -101,12 +102,12 @@ func (this *DynamicHandler) ServeContextOptions(context *web.Context, origin map
 	context.Response.WriteHeader(200)
 }
 
-func (this *DynamicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	this.ServeContextHTTP(web.NewContext(w, r))
+func (dh *DynamicHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	dh.ServeContextHTTP(web.NewContext(w, r))
 }
 
-func (this *DynamicHandler) ServeContextHTTP(context *web.Context) {
-	if ctrlmgr := this.GetControlManager(context); ctrlmgr != nil {
+func (dh *DynamicHandler) ServeContextHTTP(context *web.Context) {
+	if ctrlmgr := dh.GetControlManager(context); ctrlmgr != nil {
 		ctrlmgr.Prepare()
 		state, vw := ctrlmgr.Execute()
 		if state != -1 && vw == nil {
@@ -120,10 +121,10 @@ func (this *DynamicHandler) ServeContextHTTP(context *web.Context) {
 	}
 }
 
-func (this *DynamicHandler) GetControlManager(context *web.Context) (cm *controller.ControlManager) {
-	this.mutex.RLock()
-	var mod, control, act string = this.module, this.controller, this.action
-	this.mutex.RUnlock()
+func (dh *DynamicHandler) GetControlManager(context *web.Context) (cm *controller.ControlManager) {
+	dh.mutex.RLock()
+	var mod, control, act string = dh.module, dh.controller, dh.action
+	dh.mutex.RUnlock()
 
 	var acterr error
 	var action string
@@ -132,7 +133,7 @@ func (this *DynamicHandler) GetControlManager(context *web.Context) (cm *control
 	// this allows user to use shortcut path
 	// especially when there is only one mod
 	if s, err := context.PData.String("module"); err == nil {
-		if this.ctrlgroup.HasModule(s) || !this.ctrlgroup.HasController(mod, s) {
+		if dh.ctrlgroup.HasModule(s) || !dh.ctrlgroup.HasController(mod, s) {
 			mod = s
 		} else {
 			// controller.HasController(mod, s) == true
@@ -162,7 +163,7 @@ func (this *DynamicHandler) GetControlManager(context *web.Context) (cm *control
 		act = "_"
 	}
 
-	if ctrl := this.ctrlgroup.Controller(mod, control); ctrl != nil {
+	if ctrl := dh.ctrlgroup.Controller(mod, control); ctrl != nil {
 		// allows for shortcut action to index
 		if acterr == nil && act != "_" && !ctrl.HasAction(act) && ctrl.HasAction("index") {
 			act = "_"

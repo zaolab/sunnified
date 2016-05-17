@@ -2,6 +2,7 @@ package mvc
 
 import (
 	"encoding/base64"
+
 	"github.com/zaolab/sunnified/web"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -43,9 +44,9 @@ type BaseController struct {
 	*web.Context
 }
 
-func (this *BaseController) Construct_(_ *web.Context) {}
+func (c *BaseController) Construct_(_ *web.Context) {}
 
-func (this *BaseController) Destruct_() {}
+func (c *BaseController) Destruct_() {}
 
 type IdType interface {
 	Base64() string
@@ -54,60 +55,60 @@ type IdType interface {
 
 type IdForeign string
 
-func (this IdForeign) Base64() string {
-	return base64.URLEncoding.EncodeToString([]byte(this))
+func (id IdForeign) Base64() string {
+	return base64.URLEncoding.EncodeToString([]byte(id))
 }
 
-func (this IdForeign) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + this.Base64() + `"`), nil
+func (id IdForeign) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + id.Base64() + `"`), nil
 }
 
-func (this IdForeign) String() string {
-	return string(this)
+func (id IdForeign) String() string {
+	return string(id)
 }
 
-func (this IdForeign) ObjectId() bson.ObjectId {
-	return bson.ObjectId(this)
+func (id IdForeign) ObjectId() bson.ObjectId {
+	return bson.ObjectId(id)
 }
 
-func (this IdForeign) Hex() string {
-	return bson.ObjectId(this).Hex()
+func (id IdForeign) Hex() string {
+	return bson.ObjectId(id).Hex()
 }
 
 type Id struct {
 	bson.ObjectId `bson:"_id"`
 }
 
-func (this Id) String() string {
-	return string(this.ObjectId)
+func (id Id) String() string {
+	return string(id.ObjectId)
 }
 
-func (this Id) Base64() string {
-	return base64.URLEncoding.EncodeToString([]byte(this.ObjectId))
+func (id Id) Base64() string {
+	return base64.URLEncoding.EncodeToString([]byte(id.ObjectId))
 }
 
-func (this Id) Hex() string {
-	return this.ObjectId.Hex()
+func (id Id) Hex() string {
+	return id.ObjectId.Hex()
 }
 
-func (this Id) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + this.Base64() + `"`), nil
+func (id Id) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + id.Base64() + `"`), nil
 }
 
-func (this *Id) UnmarshalJSON(b []byte) (err error) {
+func (id *Id) UnmarshalJSON(b []byte) (err error) {
 	if count := len(b); count >= 2 {
 		var dst = make([]byte, count-2)
 		var n int
 		if n, err = base64.URLEncoding.Decode(dst, b[1:count-1]); err == nil {
-			this.ObjectId = bson.ObjectId(dst[:n])
+			id.ObjectId = bson.ObjectId(dst[:n])
 		}
 	}
 
 	return err
 }
 
-func (this Id) IdForeign() IdForeign {
-	return IdForeign(this.ObjectId)
+func (id Id) IdForeign() IdForeign {
+	return IdForeign(id.ObjectId)
 }
 
 func NewId() Id {

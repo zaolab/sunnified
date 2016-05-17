@@ -3,62 +3,63 @@ package view
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
+
 	"github.com/zaolab/sunnified/mvc"
 	"github.com/zaolab/sunnified/web"
-	"reflect"
 )
 
 type JsonView mvc.VM
 
-func (this JsonView) ContentType(ctxt *web.Context) string {
+func (jv JsonView) ContentType(ctxt *web.Context) string {
 	return "application/json; charset=utf-8"
 }
 
-func (this JsonView) Render(ctxt *web.Context) ([]byte, error) {
-	if this == nil || len(this) == 0 {
+func (jv JsonView) Render(ctxt *web.Context) ([]byte, error) {
+	if jv == nil || len(jv) == 0 {
 		return []byte{'{', '}'}, nil
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 100))
 	jsone := json.NewEncoder(buf)
-	if err := jsone.Encode(this.getEncodingInterface()); err != nil {
+	if err := jsone.Encode(jv.getEncodingInterface()); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func (this JsonView) RenderString(ctxt *web.Context) (string, error) {
-	b, err := this.Render(ctxt)
+func (jv JsonView) RenderString(ctxt *web.Context) (string, error) {
+	b, err := jv.Render(ctxt)
 	if err == nil {
 		return string(b), nil
 	}
 	return "", err
 }
 
-func (this JsonView) Publish(ctxt *web.Context) error {
+func (jv JsonView) Publish(ctxt *web.Context) error {
 	ctxt.SetHeader("Content-Type", "application/json; charset=utf-8")
 
-	if this == nil || len(this) == 0 {
+	if jv == nil || len(jv) == 0 {
 		ctxt.Response.Write([]byte{'{', '}'})
 		return nil
 	}
 
 	jsone := json.NewEncoder(ctxt.Response)
-	if err := jsone.Encode(this.getEncodingInterface()); err != nil {
+	if err := jsone.Encode(jv.getEncodingInterface()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (this JsonView) getEncodingInterface() (i interface{}) {
-	i = this
+func (jv JsonView) getEncodingInterface() (i interface{}) {
+	i = jv
 
-	if len(this) == 1 && this[""] != nil {
-		t := reflect.TypeOf(this[""])
+	if len(jv) == 1 && jv[""] != nil {
+		t := reflect.TypeOf(jv[""])
 
 		if kind := t.Kind(); kind == reflect.Map || kind == reflect.Struct ||
 			(kind == reflect.Ptr && t.Elem().Kind() == reflect.Struct) {
-			i = this[""]
+			i = jv[""]
 		}
 	}
 
@@ -67,28 +68,28 @@ func (this JsonView) getEncodingInterface() (i interface{}) {
 
 type FullJsonView JsonView
 
-func (this FullJsonView) ContentType(ctxt *web.Context) string {
-	return JsonView(this).ContentType(ctxt)
+func (jv FullJsonView) ContentType(ctxt *web.Context) string {
+	return JsonView(jv).ContentType(ctxt)
 }
 
-func (this FullJsonView) Render(ctxt *web.Context) ([]byte, error) {
-	return JsonView(this).Render(ctxt)
+func (jv FullJsonView) Render(ctxt *web.Context) ([]byte, error) {
+	return JsonView(jv).Render(ctxt)
 }
 
-func (this FullJsonView) RenderString(ctxt *web.Context) (string, error) {
-	return JsonView(this).RenderString(ctxt)
+func (jv FullJsonView) RenderString(ctxt *web.Context) (string, error) {
+	return JsonView(jv).RenderString(ctxt)
 }
 
-func (this FullJsonView) Publish(ctxt *web.Context) error {
-	return JsonView(this).Publish(ctxt)
+func (jv FullJsonView) Publish(ctxt *web.Context) error {
+	return JsonView(jv).Publish(ctxt)
 }
 
-func (this *FullJsonView) SetVMap(vmap ...mvc.VM) {
-	if *this == nil {
-		*this = NewFullJsonView(nil)
+func (jv *FullJsonView) SetVMap(vmap ...mvc.VM) {
+	if *jv == nil {
+		*jv = NewFullJsonView(nil)
 	}
 
-	_vmap := *this
+	_vmap := *jv
 
 	for _, vm := range vmap {
 		for k, v := range vm {
@@ -97,12 +98,12 @@ func (this *FullJsonView) SetVMap(vmap ...mvc.VM) {
 	}
 }
 
-func (this *FullJsonView) SetData(name string, value interface{}) {
-	if *this == nil {
-		*this = NewFullJsonView(nil)
+func (jv *FullJsonView) SetData(name string, value interface{}) {
+	if *jv == nil {
+		*jv = NewFullJsonView(nil)
 	}
 
-	_vmap := *this
+	_vmap := *jv
 	_vmap[name] = value
 }
 

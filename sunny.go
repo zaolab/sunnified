@@ -2,13 +2,6 @@ package sunnified
 
 import (
 	"fmt"
-	"github.com/zaolab/sunnified/config"
-	"github.com/zaolab/sunnified/handler"
-	"github.com/zaolab/sunnified/mvc/controller"
-	"github.com/zaolab/sunnified/mware"
-	"github.com/zaolab/sunnified/router"
-	"github.com/zaolab/sunnified/util/event"
-	"github.com/zaolab/sunnified/web"
 	"log"
 	"net"
 	"net/http"
@@ -18,6 +11,14 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/zaolab/sunnified/config"
+	"github.com/zaolab/sunnified/handler"
+	"github.com/zaolab/sunnified/mvc/controller"
+	"github.com/zaolab/sunnified/mware"
+	"github.com/zaolab/sunnified/router"
+	"github.com/zaolab/sunnified/util/event"
+	"github.com/zaolab/sunnified/web"
 )
 
 const REQ_TIMEOUT time.Duration = 10 * 60 * 1000 * 1000 * 1000 // 10mins
@@ -36,32 +37,32 @@ type SunnyResponseWriter struct {
 	ctxt     *web.Context
 }
 
-func (this *SunnyResponseWriter) WriteHeader(status int) {
-	if !this.written {
-		this.written = true
+func (sw *SunnyResponseWriter) WriteHeader(status int) {
+	if !sw.written {
+		sw.written = true
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println(err)
 			}
-			this.Status = status
-			this.ResponseWriter.WriteHeader(status)
-			this.ctxt = nil
+			sw.Status = status
+			sw.ResponseWriter.WriteHeader(status)
+			sw.ctxt = nil
 		}()
-		for i := len(this.midwares)-1; i >= 0; i-- {
-			this.midwares[i](this.ctxt)
+		for i := len(sw.midwares) - 1; i >= 0; i-- {
+			sw.midwares[i](sw.ctxt)
 		}
 	}
 }
 
-func (this *SunnyResponseWriter) Write(b []byte) (int, error) {
-	if !this.written {
-		this.WriteHeader(200)
+func (sw *SunnyResponseWriter) Write(b []byte) (int, error) {
+	if !sw.written {
+		sw.WriteHeader(200)
 	}
-	return this.ResponseWriter.Write(b)
+	return sw.ResponseWriter.Write(b)
 }
 
-func (this *SunnyResponseWriter) ParentResponseWriter() http.ResponseWriter {
-	return this.ResponseWriter
+func (sw *SunnyResponseWriter) ParentResponseWriter() http.ResponseWriter {
+	return sw.ResponseWriter
 }
 
 type SunnyApp struct {
@@ -81,7 +82,7 @@ type SunnyApp struct {
 	mwareresp   []func(*web.Context)
 }
 
-func (this *SunnyApp) Run(params map[string]interface{}) {
+func (sk *SunnyApp) Run(params map[string]interface{}) {
 	var laddr string = ":80"
 	var timeout time.Duration = REQ_TIMEOUT
 
@@ -121,132 +122,132 @@ func (this *SunnyApp) Run(params map[string]interface{}) {
 		}
 		defer listener.Close()
 
-		fcgi.Serve(listener, this)
+		fcgi.Serve(listener, sk)
 	} else {
 		log.Println("Starting SunnyApp on " + laddr)
 
-		if err := newHttpServer(laddr, this, timeout).ListenAndServe(); err != nil {
+		if err := newHttpServer(laddr, sk, timeout).ListenAndServe(); err != nil {
 			log.Panicln(err)
 		}
 	}
 }
 
-func (this *SunnyApp) Id() int {
-	return this.id
+func (sk *SunnyApp) Id() int {
+	return sk.id
 }
 
-func (this *SunnyApp) IsClosed() bool {
-	return atomic.LoadInt32(&this.closed) == 1
+func (sk *SunnyApp) IsClosed() bool {
+	return atomic.LoadInt32(&sk.closed) == 1
 }
 
-func (this *SunnyApp) AddMiddleWare(mwarecon mware.MiddleWare) {
-	this.MiddleWares = append(this.MiddleWares, mwarecon)
-	this.mwareresp = append(this.mwareresp, mwarecon.Response)
+func (sk *SunnyApp) AddMiddleWare(mwarecon mware.MiddleWare) {
+	sk.MiddleWares = append(sk.MiddleWares, mwarecon)
+	sk.mwareresp = append(sk.mwareresp, mwarecon.Response)
 }
 
-func (this *SunnyApp) AddController(cinterface interface{}) {
-	this.controllers.AddController(cinterface)
-	this.createDynamicHandler()
+func (sk *SunnyApp) AddController(cinterface interface{}) {
+	sk.controllers.AddController(cinterface)
+	sk.createDynamicHandler()
 }
 
-func (this *SunnyApp) SetControllerDefaults(action, control, mod string) {
-	this.createDynamicHandler()
-	this.ctrlhand.SetAction(action)
-	this.ctrlhand.SetController(control)
-	this.ctrlhand.SetModule(mod)
+func (sk *SunnyApp) SetControllerDefaults(action, control, mod string) {
+	sk.createDynamicHandler()
+	sk.ctrlhand.SetAction(action)
+	sk.ctrlhand.SetController(control)
+	sk.ctrlhand.SetModule(mod)
 }
 
-func (this *SunnyApp) SetControllerDefaultAction(action string) {
-	this.createDynamicHandler()
-	this.ctrlhand.SetAction(action)
+func (sk *SunnyApp) SetControllerDefaultAction(action string) {
+	sk.createDynamicHandler()
+	sk.ctrlhand.SetAction(action)
 }
 
-func (this *SunnyApp) SetControllerDefaultControl(control string) {
-	this.createDynamicHandler()
-	this.ctrlhand.SetController(control)
+func (sk *SunnyApp) SetControllerDefaultControl(control string) {
+	sk.createDynamicHandler()
+	sk.ctrlhand.SetController(control)
 }
 
-func (this *SunnyApp) SetControllerDefaultModule(mod string) {
-	this.createDynamicHandler()
-	this.ctrlhand.SetModule(mod)
+func (sk *SunnyApp) SetControllerDefaultModule(mod string) {
+	sk.createDynamicHandler()
+	sk.ctrlhand.SetModule(mod)
 }
 
-func (this *SunnyApp) SubRouter(name string) (rt router.Router) {
+func (sk *SunnyApp) SubRouter(name string) (rt router.Router) {
 	rt = NewSunnyApp()
-	this.AddRouter(name, rt)
+	sk.AddRouter(name, rt)
 	return rt
 }
 
-func (this *SunnyApp) AddResourceFunc(name string, f func() interface{}) {
-	if this.resources == nil {
-		this.resources = make(map[string]func() interface{})
+func (sk *SunnyApp) AddResourceFunc(name string, f func() interface{}) {
+	if sk.resources == nil {
+		sk.resources = make(map[string]func() interface{})
 	}
-	this.resources[name] = f
+	sk.resources[name] = f
 }
 
-func (this *SunnyApp) createDynamicHandler() {
-	if this.ctrlhand == nil {
-		this.ctrlhand = handler.NewDynamicHandler(this.controllers)
-		this.Router.Handle("/{module*}/{controller*}/{action*}/", this.ctrlhand)
-	}
-}
-
-func (this *SunnyApp) callback() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if this._callback != nil {
-		this._callback()
-		this._callback = nil
+func (sk *SunnyApp) createDynamicHandler() {
+	if sk.ctrlhand == nil {
+		sk.ctrlhand = handler.NewDynamicHandler(sk.controllers)
+		sk.Router.Handle("/{module*}/{controller*}/{action*}/", sk.ctrlhand)
 	}
 }
 
-func (this *SunnyApp) triggererror(sunctxt *web.Context, err interface{}) {
-	this.triggerevent(sunctxt, "error", map[string]interface{}{"sunny.error": err})
+func (sk *SunnyApp) callback() {
+	sk.mutex.Lock()
+	defer sk.mutex.Unlock()
+	if sk._callback != nil {
+		sk._callback()
+		sk._callback = nil
+	}
+}
+
+func (sk *SunnyApp) triggererror(sunctxt *web.Context, err interface{}) {
+	sk.triggerevent(sunctxt, "error", map[string]interface{}{"sunny.error": err})
 	if sunctxt != nil {
 		handler.InternalServerError(sunctxt.Response, sunctxt.Request)
 	}
 }
 
-func (this *SunnyApp) triggerevent(sunctxt *web.Context, eventname string, info map[string]interface{}) {
+func (sk *SunnyApp) triggerevent(sunctxt *web.Context, eventname string, info map[string]interface{}) {
 	if sunctxt != nil && sunctxt.Event != nil {
 		sunctxt.Event.CreateTrigger("sunny").Fire(eventname, info)
-	} else if this.ev != nil {
+	} else if sk.ev != nil {
 		if info == nil {
 			info = make(map[string]interface{})
 		}
 		info["sunny.context"] = nil
-		this.ev.CreateTrigger("sunny").Fire(eventname, info)
+		sk.ev.CreateTrigger("sunny").Fire(eventname, info)
 	}
 }
 
-func (this *SunnyApp) decrunners() {
-	if runners := atomic.AddInt32(&this.runners, -1); runners == 0 && atomic.LoadInt32(&this.closed) == 1 {
-		removeSunnyApp(this.id)
-		this.callback()
+func (sk *SunnyApp) decrunners() {
+	if runners := atomic.AddInt32(&sk.runners, -1); runners == 0 && atomic.LoadInt32(&sk.closed) == 1 {
+		removeSunnyApp(sk.id)
+		sk.callback()
 	}
 }
 
-func (this *SunnyApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rt, rep := this.Router.FindRequestedEndPoint(make(map[string]interface{}), r)
-	if rt == this.Router {
-		rt = this
+func (sk *SunnyApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rt, rep := sk.Router.FindRequestedEndPoint(make(map[string]interface{}), r)
+	if rt == sk.Router {
+		rt = sk
 	}
 	rt.ServeRequestedEndPoint(w, r, rep)
 }
 
-func (this *SunnyApp) FindRequestedEndPoint(value map[string]interface{}, r *http.Request) (rt router.Router, rep *router.RequestedEndPoint) {
-	rt, rep = this.Router.FindRequestedEndPoint(value, r)
-	if rt == this.Router {
-		rt = this
+func (sk *SunnyApp) FindRequestedEndPoint(value map[string]interface{}, r *http.Request) (rt router.Router, rep *router.RequestedEndPoint) {
+	rt, rep = sk.Router.FindRequestedEndPoint(value, r)
+	if rt == sk.Router {
+		rt = sk
 	}
 	return
 }
 
-func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *router.RequestedEndPoint) {
-	atomic.AddInt32(&this.runners, 1)
-	defer this.decrunners()
+func (sk *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *router.RequestedEndPoint) {
+	atomic.AddInt32(&sk.runners, 1)
+	defer sk.decrunners()
 
-	if atomic.LoadInt32(&this.closed) == 1 || w == nil || r == nil {
+	if atomic.LoadInt32(&sk.closed) == 1 || w == nil || r == nil {
 		return
 	}
 
@@ -266,13 +267,13 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 	defer func() {
 		if err := recover(); err != nil {
 			if re, ok := err.(web.Redirection); ok {
-				this.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": re})
+				sk.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": re})
 			} else if e, ok := err.(web.ContextError); ok {
-				this.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": e})
+				sk.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": e})
 				handler.ErrorHtml(w, r, e.Code())
 			} else {
 				log.Println(err)
-				this.triggererror(sunctxt, err)
+				sk.triggererror(sunctxt, err)
 			}
 		}
 
@@ -287,20 +288,20 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	sunctxt = web.NewSunnyContext(w, r, this.id)
-	sunctxt.Event = this.ev.NewSubRouter(event.M{"sunny.context": sunctxt})
+	sunctxt = web.NewSunnyContext(w, r, sk.id)
+	sunctxt.Event = sk.ev.NewSubRouter(event.M{"sunny.context": sunctxt})
 	sunctxt.UPath = rep.UPath
 	sunctxt.PData = rep.PData
 	sunctxt.Ext = rep.Ext
-	sunctxt.MaxFileSize = this.MaxFileSize
+	sunctxt.MaxFileSize = sk.MaxFileSize
 	sunctxt.ParseRequestData()
 	sw.ctxt = sunctxt
 
-	for n, f := range this.resources {
+	for n, f := range sk.resources {
 		sunctxt.SetResource(n, f())
 	}
 
-	for _, midware := range this.MiddleWares {
+	for _, midware := range sk.MiddleWares {
 		midware.Request(sunctxt)
 		defer midware.Cleanup(sunctxt)
 	}
@@ -309,8 +310,8 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sw.midwares = this.mwareresp
-	for _, midware := range this.MiddleWares {
+	sw.midwares = sk.mwareresp
+	for _, midware := range sk.MiddleWares {
 		midware.Body(sunctxt)
 	}
 
@@ -332,7 +333,7 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 
 		// TODO: Controller should not matter which is called first..
 		// make it a goroutine once determined sunctxt and ctrlmgr is completely thread-safe
-		for _, midware := range this.MiddleWares {
+		for _, midware := range sk.MiddleWares {
 			midware.Controller(sunctxt, ctrlmgr)
 		}
 
@@ -344,7 +345,7 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 
 			// TODO: View should not matter which is called first..
 			// make it a goroutine once determined sunctxt and ctrlmgr is completely thread-safe
-			for _, midware := range this.MiddleWares {
+			for _, midware := range sk.MiddleWares {
 				midware.View(sunctxt, vw)
 			}
 
@@ -354,10 +355,10 @@ func (this *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Requ
 		}
 
 		if sunctxt.HasError() {
-			this.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": sunctxt.AppError()})
+			sk.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": sunctxt.AppError()})
 			handler.ErrorHtml(w, r, sunctxt.ErrorCode())
 		} else if sunctxt.IsRedirecting() {
-			this.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": sunctxt.Redirection()})
+			sk.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": sunctxt.Redirection()})
 		} else if state != -1 && (state < 200 || state >= 300) {
 			handler.ErrorHtml(w, r, state)
 		}
@@ -380,17 +381,17 @@ notfound:
 	handler.NotFound(w, r)
 }
 
-func (this *SunnyApp) Close(callback func()) bool {
-	this.mutex.Lock()
+func (sk *SunnyApp) Close(callback func()) bool {
+	sk.mutex.Lock()
 	if callback != nil {
-		this._callback = callback
+		sk._callback = callback
 	}
-	this.mutex.Unlock()
+	sk.mutex.Unlock()
 
-	if atomic.CompareAndSwapInt32(&this.closed, 0, 1) {
-		if atomic.AddInt32(&this.runners, -1) == 0 {
-			removeSunnyApp(this.id)
-			this.callback()
+	if atomic.CompareAndSwapInt32(&sk.closed, 0, 1) {
+		if atomic.AddInt32(&sk.runners, -1) == 0 {
+			removeSunnyApp(sk.id)
+			sk.callback()
 		}
 		return true
 	}
@@ -398,9 +399,9 @@ func (this *SunnyApp) Close(callback func()) bool {
 	return false
 }
 
-func (this *SunnyApp) clear() {
-	this.ev = nil
-	this.MiddleWares = nil
+func (sk *SunnyApp) clear() {
+	sk.ev = nil
+	sk.MiddleWares = nil
 }
 
 func setreqerror(err error, w http.ResponseWriter) {

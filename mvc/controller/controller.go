@@ -2,18 +2,19 @@ package controller
 
 import (
 	"errors"
-	"github.com/zaolab/sunnified/mvc"
-	"github.com/zaolab/sunnified/mvc/view"
-	"github.com/zaolab/sunnified/web"
 	"log"
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/zaolab/sunnified/mvc"
+	"github.com/zaolab/sunnified/mvc/view"
+	"github.com/zaolab/sunnified/web"
 )
 
-var ErrControllerNotFound = errors.New("Controller not found")
-var ErrUnprepared = errors.New("Controller has not been prep'ed")
-var ErrUnexecuted = errors.New("Controller has not been executed")
+var ErrControllerNotFound = errors.New("controller not found")
+var ErrUnprepared = errors.New("controller has not been prep'ed")
+var ErrUnexecuted = errors.New("controller has not been executed")
 var ErrParseStruct = errors.New("Sunnified Parser error")
 
 const STRUCTVALUEFEED_TAG = "sunnified.feed"
@@ -51,147 +52,145 @@ type ControlManager struct {
 	vw          mvc.View
 }
 
-func (this *ControlManager) SetControllerMeta(cm *ControllerMeta) (ok bool) {
-	if !this.prepared {
+func (c *ControlManager) SetControllerMeta(cm *ControllerMeta) (ok bool) {
+	if !c.prepared {
 		rtype := cm.RType()
 		if rtype.Kind() == reflect.Ptr {
 			rtype = rtype.Elem()
 		}
 
-		this.controlmeta = cm
-		this.control = reflect.New(rtype)
+		c.controlmeta = cm
+		c.control = reflect.New(rtype)
 		ok = true
 	}
 
 	return
 }
 
-func (this *ControlManager) SetAction(action string) (ok bool) {
-	if !this.prepared {
-		this.action = action
+func (c *ControlManager) SetAction(action string) (ok bool) {
+	if !c.prepared {
+		c.action = action
 		ok = true
 	}
 
 	return
 }
 
-func (this *ControlManager) SetState(state int) {
-	this.state = state
+func (c *ControlManager) SetState(state int) {
+	c.state = state
 }
 
-func (this *ControlManager) State() int {
-	return this.state
+func (c *ControlManager) State() int {
+	return c.state
 }
 
-func (this *ControlManager) View() mvc.View {
-	return this.vw
+func (c *ControlManager) View() mvc.View {
+	return c.vw
 }
 
-func (this *ControlManager) IsPrepared() bool {
-	return this.prepared
+func (c *ControlManager) IsPrepared() bool {
+	return c.prepared
 }
 
-func (this *ControlManager) IsExecuted() bool {
-	return this.executed
+func (c *ControlManager) IsExecuted() bool {
+	return c.executed
 }
 
-func (this *ControlManager) MvcMeta() mvc.MvcMeta {
-	if this.controlmeta != nil {
-		return mvc.MvcMeta{this.controlmeta.Module(), this.controlmeta.Name(), this.action, this.context.Ext}
+func (c *ControlManager) MvcMeta() mvc.MvcMeta {
+	if c.controlmeta != nil {
+		return mvc.MvcMeta{c.controlmeta.Module(), c.controlmeta.Name(), c.action, c.context.Ext}
 	}
 	return mvc.MvcMeta{}
 }
 
-func (this *ControlManager) ModuleName() string {
-	if this.controlmeta != nil {
-		return this.controlmeta.Module()
+func (c *ControlManager) ModuleName() string {
+	if c.controlmeta != nil {
+		return c.controlmeta.Module()
 	}
 	return ""
 }
 
-func (this *ControlManager) ControllerName() string {
-	if this.controlmeta != nil {
-		return this.controlmeta.Name()
+func (c *ControlManager) ControllerName() string {
+	if c.controlmeta != nil {
+		return c.controlmeta.Name()
 	}
 	return ""
 }
 
-func (this *ControlManager) ActionName() string {
-	return this.action
+func (c *ControlManager) ActionName() string {
+	return c.action
 }
 
-func (this *ControlManager) Controller() reflect.Value {
-	return this.control
+func (c *ControlManager) Controller() reflect.Value {
+	return c.control
 }
 
-func (this *ControlManager) ActionMeta() *ActionMeta {
-	return this.controlmeta.ActionFromRequest(this.MvcMeta()[mvc.MVC_ACTION], this.context)
+func (c *ControlManager) ActionMeta() *ActionMeta {
+	return c.controlmeta.ActionFromRequest(c.MvcMeta()[mvc.MVC_ACTION], c.context)
 }
 
-func (this *ControlManager) AvailableMethods() ReqMethod {
-	return this.controlmeta.ActionAvailableMethods(this.action)
+func (c *ControlManager) AvailableMethods() ReqMethod {
+	return c.controlmeta.ActionAvailableMethods(c.action)
 }
 
-func (this *ControlManager) AvailableMethodsList() []string {
-	return this.controlmeta.ActionAvailableMethodsList(this.action)
+func (c *ControlManager) AvailableMethodsList() []string {
+	return c.controlmeta.ActionAvailableMethodsList(c.action)
 }
 
-func (this *ControlManager) ControllerMeta() *ControllerMeta {
-	return this.controlmeta
+func (c *ControlManager) ControllerMeta() *ControllerMeta {
+	return c.controlmeta
 }
 
-func (this *ControlManager) Context() *web.Context {
-	return this.context
+func (c *ControlManager) Context() *web.Context {
+	return c.context
 }
 
-func (this *ControlManager) PrepareAndExecute() (state int, vw mvc.View) {
-	if this.Prepare() == nil {
-		return this.Execute()
+func (c *ControlManager) PrepareAndExecute() (state int, vw mvc.View) {
+	if c.Prepare() == nil {
+		return c.Execute()
 	}
-	return this.state, nil
+	return c.state, nil
 }
 
-func (this *ControlManager) Prepare() error {
-	if !this.prepared && (this.state == 0 || (this.state >= 200 && this.state < 300)) {
-		if this.controlmeta == nil {
-			this.state = 404
+func (c *ControlManager) Prepare() error {
+	if !c.prepared && (c.state == 0 || (c.state >= 200 && c.state < 300)) {
+		if c.controlmeta == nil {
+			c.state = 404
 			return ErrControllerNotFound
 		}
 
-		switch this.controlmeta.T() {
+		switch c.controlmeta.T() {
 		case CONTYPE_CONSTRUCTOR:
-			results := this.control.Call(getArgSlice(this.controlmeta.Args(),
-				getVMap(this.context),
-				this.context.PData))
-			this.control = results[0]
+			results := c.control.Call(getArgSlice(c.controlmeta.Args(),
+				getVMap(c.context),
+				c.context.PData))
+			c.control = results[0]
 
-			if this.control.Kind() == reflect.Interface {
-				this.control = this.control.Elem()
+			if c.control.Kind() == reflect.Interface {
+				c.control = c.control.Elem()
 			}
 			// after Elem from Interface, it might be a pointer to a struct too
-			if this.control.Kind() == reflect.Ptr {
-				this.control = this.control.Elem()
+			if c.control.Kind() == reflect.Ptr {
+				c.control = c.control.Elem()
 			}
 
-			if this.controlmeta.Status() {
+			if c.controlmeta.Status() {
 				state := int(results[1].Int())
 
 				if state <= 0 {
 					state = http.StatusOK
 				}
 
-				this.state = state
+				c.state = state
 			}
-		case CONTYPE_STRUCT:
-			fallthrough
-		case CONTYPE_SCONTROLLER:
-			fields := this.controlmeta.Fields()
-			tmpcontrol := reflect.Indirect(this.control)
+		case CONTYPE_STRUCT, CONTYPE_SCONTROLLER:
+			fields := c.controlmeta.Fields()
+			tmpcontrol := reflect.Indirect(c.control)
 
 			for _, field := range fields {
 				value := getDataValue(&field.DataMeta,
-					getVMap(this.context),
-					this.context.PData)
+					getVMap(c.context),
+					c.context.PData)
 
 				// allows middleware resources to make changes to value based on tag
 				// this can be useful to csrf where non csrf verified values are filtered
@@ -205,26 +204,26 @@ func (this *ControlManager) Prepare() error {
 					}
 
 					for _, r := range reses {
-						rinterface := this.context.Resource(strings.TrimSpace(r))
+						rinterface := c.context.Resource(strings.TrimSpace(r))
 
 						if rinterface != nil {
 							if parser, ok := rinterface.(StructValueFeeder); ok {
 								var err error
-								value, err = parser.FeedStructValue(this.context, field, value)
+								value, err = parser.FeedStructValue(c.context, field, value)
 								if err != nil {
-									this.state = 500
+									c.state = 500
 									log.Println(err)
 									return ErrParseStruct
 								}
 							}
 						} else {
 							log.Println("Resource to parse struct var not found: ", r)
-							this.state = 500
+							c.state = 500
 							return ErrParseStruct
 						}
 					}
 				} else if res := field.Tag().Get(STRUCTVALUERES_TAG); res != "" {
-					rinterface := this.context.Resource(strings.TrimSpace(res))
+					rinterface := c.context.Resource(strings.TrimSpace(res))
 
 					if rinterface != nil {
 						value = reflect.ValueOf(rinterface)
@@ -236,62 +235,62 @@ func (this *ControlManager) Prepare() error {
 				}
 			}
 
-			if this.state != 500 && this.controlmeta.T() == CONTYPE_SCONTROLLER {
-				ctrler := this.control.Interface().(mvc.Controller)
-				ctrler.Construct_(this.context)
+			if c.state != 500 && c.controlmeta.T() == CONTYPE_SCONTROLLER {
+				ctrler := c.control.Interface().(mvc.Controller)
+				ctrler.Construct_(c.context)
 			}
 		}
 
-		this.prepared = true
+		c.prepared = true
 	}
 
 	return nil
 }
 
-func (this *ControlManager) Execute() (state int, vw mvc.View) {
-	if this.prepared {
-		if this.state == 0 {
-			this.state = 200
+func (c *ControlManager) Execute() (state int, vw mvc.View) {
+	if c.prepared {
+		if c.state == 0 {
+			c.state = 200
 		}
 
 		var results []reflect.Value
-		var rstyle ResultStyle = this.controlmeta.ResultStyle
+		var rstyle ResultStyle = c.controlmeta.ResultStyle
 
-		if this.state >= http.StatusOK && this.state < http.StatusMultipleChoices {
-			switch this.controlmeta.T() {
+		if c.state >= http.StatusOK && c.state < http.StatusMultipleChoices {
+			switch c.controlmeta.T() {
 			case CONTYPE_FUNC:
-				results = this.control.Call(getArgSlice(this.controlmeta.Args(),
-					getVMap(this.context),
-					this.context.PData))
+				results = c.control.Call(getArgSlice(c.controlmeta.Args(),
+					getVMap(c.context),
+					c.context.PData))
 			default:
-				actmeta := this.ActionMeta()
+				actmeta := c.ActionMeta()
 				if actmeta != nil {
-					meth := this.control.MethodByName(actmeta.Name())
+					meth := c.control.MethodByName(actmeta.Name())
 					results = meth.Call(getArgSlice(actmeta.Args(),
-						getVMap(this.context),
-						this.context.PData))
+						getVMap(c.context),
+						c.context.PData))
 					rstyle = actmeta.ResultStyle
 				} else {
-					this.state = 404
-					state = this.state
+					c.state = 404
+					state = c.state
 					return
 				}
 			}
 		}
 
 		if rstyle.Status() {
-			this.state = int(results[1].Int())
+			c.state = int(results[1].Int())
 		}
 
 		if rstyle.View() || rstyle.Vmap() || rstyle.MapSI() {
 			// for a consistent error page, error should be returned instead and allow sunny server itself
 			// to render the error page
-			state = this.state
+			state = c.state
 
 			if state == 200 || state == 0 {
 				if rstyle.View() {
 					if !results[0].IsNil() && results[0].IsValid() {
-						this.vw = (results[0].Interface()).(mvc.View)
+						c.vw = (results[0].Interface()).(mvc.View)
 					}
 				} else {
 					var vmap mvc.VM
@@ -304,10 +303,10 @@ func (this *ControlManager) Execute() (state int, vw mvc.View) {
 						vmap = mvc.VM(results[0].Interface().(map[string]interface{}))
 					}
 
-					this.vw = view.NewResultView(vmap)
+					c.vw = view.NewResultView(vmap)
 				}
 
-				vw = this.vw
+				vw = c.vw
 				if vw == nil {
 					state = -1
 				}
@@ -317,32 +316,32 @@ func (this *ControlManager) Execute() (state int, vw mvc.View) {
 			state = -1
 		}
 
-		this.executed = true
+		c.executed = true
 	} else {
-		state = this.state
+		state = c.state
 	}
 
 	return
 }
 
-func (this *ControlManager) PublishView() (err error) {
-	if !this.prepared {
+func (c *ControlManager) PublishView() (err error) {
+	if !c.prepared {
 		err = ErrUnprepared
-	} else if !this.executed {
+	} else if !c.executed {
 		err = ErrUnexecuted
-	} else if this.vw != nil {
-		if this.context.Request.Method == "HEAD" {
-			this.context.Response.Header().Set("Content-Type", this.vw.ContentType(this.context))
+	} else if c.vw != nil {
+		if c.context.Request.Method == "HEAD" {
+			c.context.Response.Header().Set("Content-Type", c.vw.ContentType(c.context))
 		} else {
-			err = this.vw.Publish(this.context)
+			err = c.vw.Publish(c.context)
 		}
 	}
 	return
 }
 
-func (this *ControlManager) Cleanup() {
-	if this.prepared && this.controlmeta.T() == CONTYPE_SCONTROLLER {
-		ctrler := this.control.Interface().(mvc.Controller)
+func (c *ControlManager) Cleanup() {
+	if c.prepared && c.controlmeta.T() == CONTYPE_SCONTROLLER {
+		ctrler := c.control.Interface().(mvc.Controller)
 		ctrler.Destruct_()
 	}
 }
@@ -415,9 +414,7 @@ func getDataValue(arg *DataMeta, vmap map[string]reflect.Value, d web.PData) (va
 	case DATATYPE_DATETIME:
 		val, _ := d.DateTime(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_STRUCT:
-		fallthrough
-	case DATATYPE_EMBEDDED:
+	case DATATYPE_STRUCT, DATATYPE_EMBEDDED:
 		fields := arg.Fields()
 		model := reflect.New(arg.RType())
 		modelval := model.Elem()

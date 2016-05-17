@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var ErrResourceNotFound = errors.New("Resource not found")
+var ErrResourceNotFound = errors.New("resource not found")
 var contentparser = make(map[string]ContentParser)
 
 const (
@@ -112,27 +112,27 @@ type Redirection struct {
 	url  string
 }
 
-func (this Redirection) URL() string {
-	return this.url
+func (r Redirection) URL() string {
+	return r.url
 }
 
-func (this Redirection) Code() int {
-	return this.code
+func (r Redirection) Code() int {
+	return r.code
 }
 
 type RedirectError struct {
 	url string
 }
 
-func (this RedirectError) Error() string {
-	return "Error redirecting service to " + this.url + "."
+func (re RedirectError) Error() string {
+	return "Error redirecting service to " + re.url + "."
 }
 
-func (this RedirectError) URL() string {
-	return this.url
+func (re RedirectError) URL() string {
+	return re.url
 }
 
-func (this RedirectError) Code() int {
+func (re RedirectError) Code() int {
 	return 500
 }
 
@@ -141,19 +141,19 @@ type ExpectationError struct {
 	maxsize int64
 }
 
-func (this ExpectationError) Error() string {
-	return fmt.Sprintf("Request exceeds max file size of %dMB", this.maxsize/1024/1024)
+func (ee ExpectationError) Error() string {
+	return fmt.Sprintf("request exceeds max file size of %dMB", ee.maxsize/1024/1024)
 }
 
-func (this ExpectationError) IncomingSize() int64 {
-	return this.size
+func (ee ExpectationError) IncomingSize() int64 {
+	return ee.size
 }
 
-func (this ExpectationError) MaxFileSize() int64 {
-	return this.maxsize
+func (ee ExpectationError) MaxFileSize() int64 {
+	return ee.maxsize
 }
 
-func (this ExpectationError) Code() int {
+func (ee ExpectationError) Code() int {
 	return http.StatusExpectationFailed
 }
 
@@ -162,12 +162,12 @@ type AppError struct {
 	err  string
 }
 
-func (this AppError) Error() string {
-	return this.err
+func (ae AppError) Error() string {
+	return ae.err
 }
 
-func (this AppError) Code() int {
-	return this.code
+func (ae AppError) Code() int {
+	return ae.code
 }
 
 type ContentParser func(io.Reader) map[string]interface{}
@@ -186,25 +186,25 @@ type parseState struct {
 	Error  error
 }
 
-func (this *parseState) Started() bool {
-	return atomic.LoadInt32(&this.state) != 0
+func (p *parseState) Started() bool {
+	return atomic.LoadInt32(&p.state) != 0
 }
 
-func (this *parseState) Ended() bool {
-	return atomic.LoadInt32(&this.state) == 2
+func (p *parseState) Ended() bool {
+	return atomic.LoadInt32(&p.state) == 2
 }
 
-func (this *parseState) Start() (ok bool) {
-	if atomic.CompareAndSwapInt32(&this.state, 0, 1) {
-		this.Status.Add(1)
+func (p *parseState) Start() (ok bool) {
+	if atomic.CompareAndSwapInt32(&p.state, 0, 1) {
+		p.Status.Add(1)
 		ok = true
 	}
 	return
 }
 
-func (this *parseState) End(err error) {
-	if atomic.CompareAndSwapInt32(&this.state, 1, 2) {
-		this.Error = err
-		this.Status.Done()
+func (p *parseState) End(err error) {
+	if atomic.CompareAndSwapInt32(&p.state, 1, 2) {
+		p.Error = err
+		p.Status.Done()
 	}
 }

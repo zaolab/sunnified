@@ -1,11 +1,12 @@
 package router
 
 import (
-	//"github.com/zaolab/sunnified/config"
-	"github.com/zaolab/sunnified/web"
 	"net/http"
 	"regexp"
 	"strings"
+
+	//"github.com/zaolab/sunnified/config"
+	"github.com/zaolab/sunnified/web"
 )
 
 func NewSunnyRouter() *SunnyRouter {
@@ -130,14 +131,14 @@ type SunnyRouter struct {
 	matchers map[string]RouteMatcher
 }
 
-func (this *SunnyRouter) CanRouteRequest(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
+func (sr *SunnyRouter) CanRouteRequest(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
 	var ok bool
 
 	if value == nil {
 		value = make(map[string]interface{})
 	}
 
-	for _, matcher := range this.matchers {
+	for _, matcher := range sr.matchers {
 		if ok, value = matcher.Match(r, value); ok {
 			return false, value
 		}
@@ -146,43 +147,43 @@ func (this *SunnyRouter) CanRouteRequest(r *http.Request, value map[string]inter
 	return true, value
 }
 
-func (this *SunnyRouter) SetHost(host string, canon string) {
-	this.host = strings.ToLower(host)
-	this.hostcanon = canon
-	this.hostpredot = false
-	this.hostsplit = nil
-	this.hostregex = nil
+func (sr *SunnyRouter) SetHost(host string, canon string) {
+	sr.host = strings.ToLower(host)
+	sr.hostcanon = canon
+	sr.hostpredot = false
+	sr.hostsplit = nil
+	sr.hostregex = nil
 
 	if host != "" {
 		if host[0] == '.' {
 			host = host[1:len(host)]
-			this.hostpredot = true
+			sr.hostpredot = true
 		}
 
-		this.hostsplit = strings.Split(host, ".")
-		this.hostregex = make([]*regexp.Regexp, len(this.hostsplit))
+		sr.hostsplit = strings.Split(host, ".")
+		sr.hostregex = make([]*regexp.Regexp, len(sr.hostsplit))
 
-		for i, v := range this.hostsplit {
+		for i, v := range sr.hostsplit {
 			if strings.ContainsAny(v, "?|()*[]") {
-				this.hostregex[i] = regexp.MustCompile("^" + strings.Replace(v, "*", ".*", -1) + "$")
+				sr.hostregex[i] = regexp.MustCompile("^" + strings.Replace(v, "*", ".*", -1) + "$")
 			}
 		}
 
-		if this.matchers == nil {
-			this.matchers = make(map[string]RouteMatcher)
+		if sr.matchers == nil {
+			sr.matchers = make(map[string]RouteMatcher)
 		}
 
-		this.matchers["host"] = RouteMatcherFunc(this.MatchHost)
+		sr.matchers["host"] = RouteMatcherFunc(sr.MatchHost)
 	} else {
-		delete(this.matchers, "host")
+		delete(sr.matchers, "host")
 	}
 }
 
-func (this *SunnyRouter) Host() string {
-	return this.host
+func (sr *SunnyRouter) Host() string {
+	return sr.host
 }
 
-func (this *SunnyRouter) FullHost() string {
+func (sr *SunnyRouter) FullHost() string {
 	var getParentHost func(Router) string
 
 	getParentHost = func(rt Router) string {
@@ -198,22 +199,22 @@ func (this *SunnyRouter) FullHost() string {
 		}
 	}
 
-	if h := getParentHost(this); h != "" {
+	if h := getParentHost(sr); h != "" {
 		if h[0] == '.' {
-			return this.host + h
+			return sr.host + h
 		}
 
-		return this.host + "." + h
+		return sr.host + "." + h
 	}
 
-	return this.host
+	return sr.host
 }
 
-func (this *SunnyRouter) HostCanon() string {
-	return this.hostcanon
+func (sr *SunnyRouter) HostCanon() string {
+	return sr.hostcanon
 }
 
-func (this *SunnyRouter) FullHostCanon() string {
+func (sr *SunnyRouter) FullHostCanon() string {
 	var getParentHost func(Router) string
 
 	getParentHost = func(rt Router) string {
@@ -229,39 +230,39 @@ func (this *SunnyRouter) FullHostCanon() string {
 		}
 	}
 
-	if h := getParentHost(this); h != "" {
-		return this.hostcanon + "." + h
+	if h := getParentHost(sr); h != "" {
+		return sr.hostcanon + "." + h
 	}
 
-	return this.hostcanon
+	return sr.hostcanon
 }
 
-func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
+func (sr *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
 	if vIface, exists := value["host"]; exists {
 		v := vIface.(string)
 
-		if this.pathprefix == "" {
+		if sr.pathprefix == "" {
 			return true, value
 		}
 
 		var (
 			hostArr  = strings.Split(v, ".")
-			lohArr   = len(this.hostsplit)
+			lohArr   = len(sr.hostsplit)
 			lhostArr = len(hostArr)
 		)
 
-		if lhostArr < lohArr || (lhostArr > lohArr && !this.hostpredot) {
+		if lhostArr < lohArr || (lhostArr > lohArr && !sr.hostpredot) {
 			return false, value
 		} else if lhostArr > lohArr {
 			hostArr = hostArr[lhostArr-lohArr : lhostArr]
 		}
 
-		for i, re := range this.hostregex {
+		for i, re := range sr.hostregex {
 			if re != nil {
 				if !re.MatchString(hostArr[i]) {
 					return false, value
 				}
-			} else if this.hostsplit[i] != hostArr[i] {
+			} else if sr.hostsplit[i] != hostArr[i] {
 				return false, value
 			}
 		}
@@ -271,7 +272,7 @@ func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}
 	}
 
 	host := strings.ToLower(r.Host)
-	h := this.FullHost()
+	h := sr.FullHost()
 
 	if h == "" {
 		return true, value
@@ -282,7 +283,7 @@ func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}
 	}
 
 	if strings.ContainsAny(h, "?|()*[]") {
-		if this.hostpredot {
+		if sr.hostpredot {
 			h = h[1:len(h)]
 		}
 
@@ -291,11 +292,11 @@ func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}
 			hostArr  = strings.Split(host, ".")
 			_hostArr = hostArr
 			lhArr    = len(hArr)
-			lohArr   = len(this.hostsplit)
+			lohArr   = len(sr.hostsplit)
 			lhostArr = len(hostArr)
 		)
 
-		if lhostArr < lhArr || (lhostArr > lhArr && !this.hostpredot) {
+		if lhostArr < lhArr || (lhostArr > lhArr && !sr.hostpredot) {
 			return false, value
 		} else if lhostArr > lhArr {
 			hostArr = hostArr[lhostArr-lhArr : lhostArr]
@@ -313,11 +314,11 @@ func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}
 					return false, value
 				}
 			} else {
-				if this.hostregex[i] != nil {
-					if !this.hostregex[i].MatchString(v) {
+				if sr.hostregex[i] != nil {
+					if !sr.hostregex[i].MatchString(v) {
 						return false, value
 					}
-				} else if this.hostsplit[i] != v {
+				} else if sr.hostsplit[i] != v {
 					return false, value
 				}
 			}
@@ -355,7 +356,7 @@ func (this *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}
 	return host == h, value
 }
 
-func (this *SunnyRouter) SetPathPrefix(path string, canon string) {
+func (sr *SunnyRouter) SetPathPrefix(path string, canon string) {
 	path = strings.TrimSuffix(path, "/")
 
 	if path != "" && path[0] != '/' {
@@ -365,27 +366,27 @@ func (this *SunnyRouter) SetPathPrefix(path string, canon string) {
 		canon = "/" + canon
 	}
 
-	this.pathprefix = path
-	this.pathcanon = canon
+	sr.pathprefix = path
+	sr.pathcanon = canon
 
 	if path != "" {
-		if this.matchers == nil {
-			this.matchers = make(map[string]RouteMatcher)
+		if sr.matchers == nil {
+			sr.matchers = make(map[string]RouteMatcher)
 		}
 
-		this.matchers["pathprefix"] = RouteMatcherFunc(this.MatchPathPrefix)
+		sr.matchers["pathprefix"] = RouteMatcherFunc(sr.MatchPathPrefix)
 	} else {
-		delete(this.matchers, "pathprefix")
+		delete(sr.matchers, "pathprefix")
 	}
 }
 
-func (this *SunnyRouter) MatchPathPrefix(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
+func (sr *SunnyRouter) MatchPathPrefix(r *http.Request, value map[string]interface{}) (bool, map[string]interface{}) {
 	if vIface, exists := value["pathprefix"]; exists {
 		v := vIface.(string)
 
-		lenpp := len(this.pathprefix)
+		lenpp := len(sr.pathprefix)
 		lenv := len(v)
-		if this.pathprefix == "" || (lenv > lenpp && v[0:lenpp] == this.pathprefix) {
+		if sr.pathprefix == "" || (lenv > lenpp && v[0:lenpp] == sr.pathprefix) {
 			value["pathprefix"] = v[lenpp:lenv]
 			return true, value
 		} else {
@@ -394,7 +395,7 @@ func (this *SunnyRouter) MatchPathPrefix(r *http.Request, value map[string]inter
 	}
 
 	var (
-		path    = this.FullPathPrefix()
+		path    = sr.FullPathPrefix()
 		urlpath = r.URL.Path
 		lpath   = len(path)
 	)
@@ -410,11 +411,11 @@ func (this *SunnyRouter) MatchPathPrefix(r *http.Request, value map[string]inter
 	return len(urlpath) >= lpath && urlpath[0:lpath] == path, nil
 }
 
-func (this *SunnyRouter) PathPrefix() string {
-	return this.pathprefix
+func (sr *SunnyRouter) PathPrefix() string {
+	return sr.pathprefix
 }
 
-func (this *SunnyRouter) FullPathPrefix() string {
+func (sr *SunnyRouter) FullPathPrefix() string {
 	var getParentPath func(Router) string
 
 	getParentPath = func(rt Router) string {
@@ -430,18 +431,18 @@ func (this *SunnyRouter) FullPathPrefix() string {
 		}
 	}
 
-	if prefix := getParentPath(this); prefix != "" {
-		return prefix + this.pathprefix
+	if prefix := getParentPath(sr); prefix != "" {
+		return prefix + sr.pathprefix
 	}
 
-	return this.pathprefix
+	return sr.pathprefix
 }
 
-func (this *SunnyRouter) PathPrefixCanon() string {
-	return this.pathcanon
+func (sr *SunnyRouter) PathPrefixCanon() string {
+	return sr.pathcanon
 }
 
-func (this *SunnyRouter) FullPathPrefixCanon() string {
+func (sr *SunnyRouter) FullPathPrefixCanon() string {
 	var getParentPath func(Router) string
 
 	getParentPath = func(rt Router) string {
@@ -457,62 +458,62 @@ func (this *SunnyRouter) FullPathPrefixCanon() string {
 		}
 	}
 
-	if prefix := getParentPath(this); prefix != "" {
+	if prefix := getParentPath(sr); prefix != "" {
 		prefix = strings.TrimSuffix(prefix, "/")
-		return prefix + this.pathcanon
+		return prefix + sr.pathcanon
 	}
 
-	return this.pathcanon
+	return sr.pathcanon
 }
 
-func (this *SunnyRouter) SetMatcher(name string, rm RouteMatcher) {
-	if this.matchers == nil {
-		this.matchers = make(map[string]RouteMatcher)
+func (sr *SunnyRouter) SetMatcher(name string, rm RouteMatcher) {
+	if sr.matchers == nil {
+		sr.matchers = make(map[string]RouteMatcher)
 	}
 
-	this.matchers[name] = rm
+	sr.matchers[name] = rm
 }
 
-func (this *SunnyRouter) DeleteMatcher(name string) {
-	delete(this.matchers, name)
+func (sr *SunnyRouter) DeleteMatcher(name string) {
+	delete(sr.matchers, name)
 }
 
-func (this *SunnyRouter) Matcher(name string) RouteMatcher {
-	if m, ok := this.matchers[name]; ok {
+func (sr *SunnyRouter) Matcher(name string) RouteMatcher {
+	if m, ok := sr.matchers[name]; ok {
 		return m
 	}
 	return nil
 }
 
-func (this *SunnyRouter) SubRouter(name string) (rt Router) {
+func (sr *SunnyRouter) SubRouter(name string) (rt Router) {
 	rt = NewSunnyRouter()
-	this.AddRouter(name, rt)
+	sr.AddRouter(name, rt)
 	return
 }
 
-func (this *SunnyRouter) AddRouter(name string, rt Router) (ok bool) {
-	if this.routers == nil {
-		this.routers = make(map[string]Router)
+func (sr *SunnyRouter) AddRouter(name string, rt Router) (ok bool) {
+	if sr.routers == nil {
+		sr.routers = make(map[string]Router)
 	}
 
-	if ok = rt.SetParent(this); ok {
-		this.routers[name] = rt
+	if ok = rt.SetParent(sr); ok {
+		sr.routers[name] = rt
 	}
 
 	return
 }
 
-func (this *SunnyRouter) DelRouterByName(name string) {
-	if rt, exists := this.routers[name]; exists {
-		delete(this.routers, name)
+func (sr *SunnyRouter) DelRouterByName(name string) {
+	if rt, exists := sr.routers[name]; exists {
+		delete(sr.routers, name)
 		rt.ResetParent()
 	}
 }
 
-func (this *SunnyRouter) DelRouter(rt Router) {
+func (sr *SunnyRouter) DelRouter(rt Router) {
 	var rtname = ""
 
-	for name, r := range this.routers {
+	for name, r := range sr.routers {
 		if r == rt {
 			rtname = name
 			break
@@ -520,53 +521,53 @@ func (this *SunnyRouter) DelRouter(rt Router) {
 	}
 
 	if rtname != "" {
-		delete(this.routers, rtname)
+		delete(sr.routers, rtname)
 		rt.ResetParent()
 	}
 }
 
-func (this *SunnyRouter) Routers() map[string]Router {
+func (sr *SunnyRouter) Routers() map[string]Router {
 	newcopy := make(map[string]Router)
-	for k, v := range this.routers {
+	for k, v := range sr.routers {
 		newcopy[k] = v
 	}
 	return newcopy
 }
 
-func (this *SunnyRouter) Router(name string) Router {
-	if rt, exists := this.routers[name]; exists {
+func (sr *SunnyRouter) Router(name string) Router {
+	if rt, exists := sr.routers[name]; exists {
 		return rt
 	}
 
 	return nil
 }
 
-func (this *SunnyRouter) SetParent(rt Router) bool {
-	if this.parent == nil {
-		this.parent = rt
+func (sr *SunnyRouter) SetParent(rt Router) bool {
+	if sr.parent == nil {
+		sr.parent = rt
 		return true
 	}
 	return false
 }
 
-func (this *SunnyRouter) ResetParent() {
-	parent := this.parent
-	this.parent = nil
+func (sr *SunnyRouter) ResetParent() {
+	parent := sr.parent
+	sr.parent = nil
 
 	if parent != nil {
-		parent.DelRouter(this)
+		parent.DelRouter(sr)
 	}
 }
 
-func (this *SunnyRouter) Parent() Router {
-	return this.parent
+func (sr *SunnyRouter) Parent() Router {
+	return sr.parent
 }
 
-func (this *SunnyRouter) HasParent() bool {
-	return this.parent != nil
+func (sr *SunnyRouter) HasParent() bool {
+	return sr.parent != nil
 }
 
-func (this *SunnyRouter) FindRequestedEndPoint(value map[string]interface{}, r *http.Request) (Router, *RequestedEndPoint) {
+func (sr *SunnyRouter) FindRequestedEndPoint(value map[string]interface{}, r *http.Request) (Router, *RequestedEndPoint) {
 	var ok bool
 
 	if value == nil {
@@ -577,25 +578,25 @@ func (this *SunnyRouter) FindRequestedEndPoint(value map[string]interface{}, r *
 		value["pathprefix"] = r.URL.Path
 	}
 
-	if ok, value = this.CanRouteRequest(r, value); ok {
-		for _, rt := range this.routers {
+	if ok, value = sr.CanRouteRequest(r, value); ok {
+		for _, rt := range sr.routers {
 			if rt, rep := rt.FindRequestedEndPoint(value, r); rep != nil {
 				return rt, rep
 			}
 		}
 
-		return this, this.Route.FindRequestedEndPoint(value["pathprefix"].(string), r)
+		return sr, sr.Route.FindRequestedEndPoint(value["pathprefix"].(string), r)
 	}
 
-	return this, nil
+	return sr, nil
 }
 
-func (this *SunnyRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	router, rep := this.FindRequestedEndPoint(make(map[string]interface{}), r)
+func (sr *SunnyRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	router, rep := sr.FindRequestedEndPoint(make(map[string]interface{}), r)
 	router.ServeRequestedEndPoint(w, r, rep)
 }
 
-func (this *SunnyRouter) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *RequestedEndPoint) {
+func (sr *SunnyRouter) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Request, rep *RequestedEndPoint) {
 	if rep != nil {
 		ctxt := web.NewContext(w, r)
 		ctxt.UPath = rep.UPath

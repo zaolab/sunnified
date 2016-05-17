@@ -8,14 +8,15 @@ import (
 	"crypto/subtle"
 	"encoding/base32"
 	"encoding/binary"
+	"errors"
 	"fmt"
-	"github.com/zaolab/sunnified/sec"
 	"hash"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-	"errors"
+
+	"github.com/zaolab/sunnified/sec"
 )
 
 const (
@@ -26,8 +27,8 @@ const (
 )
 
 var (
-	ErrContainsColon = errors.New("Issuer/Account name cannot contain colon")
-	ErrInvalidLen = errors.New("Password can only be 6 or 8 characters long")
+	ErrContainsColon = errors.New("issuer/account name cannot contain colon")
+	ErrInvalidLen    = errors.New("password can only be 6 or 8 characters long")
 )
 
 type OTP interface {
@@ -70,152 +71,152 @@ type HOTP struct {
 	digits  int
 }
 
-func (this *HOTP) SetHashFunc(name string, h func() hash.Hash) {
-	this.hname = name
-	this.h = hmac.New(h, this.secret)
+func (ho *HOTP) SetHashFunc(name string, h func() hash.Hash) {
+	ho.hname = name
+	ho.h = hmac.New(h, ho.secret)
 }
 
-func (this *HOTP) UseSHA1() {
-	if this.hname != "SHA1" {
-		this.hname = "SHA1"
-		this.h = hmac.New(sha1.New, this.secret)
+func (ho *HOTP) UseSHA1() {
+	if ho.hname != "SHA1" {
+		ho.hname = "SHA1"
+		ho.h = hmac.New(sha1.New, ho.secret)
 	}
 }
 
-func (this *HOTP) UseSHA256() {
-	if this.hname != "SHA256" {
-		this.hname = "SHA256"
-		this.h = hmac.New(sha256.New, this.secret)
+func (ho *HOTP) UseSHA256() {
+	if ho.hname != "SHA256" {
+		ho.hname = "SHA256"
+		ho.h = hmac.New(sha256.New, ho.secret)
 	}
 }
 
-func (this *HOTP) UseSHA512() {
-	if this.hname != "SHA512" {
-		this.hname = "SHA512"
-		this.h = hmac.New(sha512.New, this.secret)
+func (ho *HOTP) UseSHA512() {
+	if ho.hname != "SHA512" {
+		ho.hname = "SHA512"
+		ho.h = hmac.New(sha512.New, ho.secret)
 	}
 }
 
-func (this *HOTP) HashFuncName() string {
-	return this.hname
+func (ho *HOTP) HashFuncName() string {
+	return ho.hname
 }
 
-func (this *HOTP) SetIssuer(issuer string) error {
+func (ho *HOTP) SetIssuer(issuer string) error {
 	if strings.Contains(issuer, ":") {
 		return ErrContainsColon
 	}
-	this.issuer = issuer
+	ho.issuer = issuer
 	return nil
 }
 
-func (this *HOTP) Issuer() string {
-	return this.issuer
+func (ho *HOTP) Issuer() string {
+	return ho.issuer
 }
 
-func (this *HOTP) SetAccountName(account string) error {
+func (ho *HOTP) SetAccountName(account string) error {
 	if strings.Contains(account, ":") {
 		return ErrContainsColon
 	}
-	this.account = account
+	ho.account = account
 	return nil
 }
 
-func (this *HOTP) AccountName() string {
-	return this.account
+func (ho *HOTP) AccountName() string {
+	return ho.account
 }
 
-func (this *HOTP) SetDigits(d int) error {
+func (ho *HOTP) SetDigits(d int) error {
 	if d == 6 || d == 8 {
-		this.digits = d
+		ho.digits = d
 		return nil
 	}
 	return ErrInvalidLen
 }
 
-func (this *HOTP) Digits() int {
-	if this.digits == 0 {
+func (ho *HOTP) Digits() int {
+	if ho.digits == 0 {
 		return DEFAULT_DIGITS
 	}
-	return this.digits
+	return ho.digits
 }
 
-func (this *HOTP) SetCounter(c uint64) {
-	this.counter = c
+func (ho *HOTP) SetCounter(c uint64) {
+	ho.counter = c
 }
 
-func (this *HOTP) IncCounter() {
-	this.counter++
+func (ho *HOTP) IncCounter() {
+	ho.counter++
 }
 
-func (this *HOTP) Counter() uint64 {
-	return this.counter
+func (ho *HOTP) Counter() uint64 {
+	return ho.counter
 }
 
-func (this *HOTP) SetWindowSize(c int) {
-	this.window = c
+func (ho *HOTP) SetWindowSize(c int) {
+	ho.window = c
 }
 
-func (this *HOTP) WindowSize() int {
-	return this.window
+func (ho *HOTP) WindowSize() int {
+	return ho.window
 }
 
-func (this *HOTP) VerifyAt(password string, counter uint64) bool {
-	return this.verifyOTP(password, counter, 0) != -1
+func (ho *HOTP) VerifyAt(password string, counter uint64) bool {
+	return ho.verifyOTP(password, counter, 0) != -1
 }
 
-func (this *HOTP) Verify(password string) bool {
-	if count := this.verifyOTP(password, this.counter, this.window); count != -1 {
-		this.counter += uint64(count) + 1
+func (ho *HOTP) Verify(password string) bool {
+	if count := ho.verifyOTP(password, ho.counter, ho.window); count != -1 {
+		ho.counter += uint64(count) + 1
 		return true
 	}
 	return false
 }
 
-func (this *HOTP) String() string {
-	return base32.StdEncoding.EncodeToString(this.secret)
+func (ho *HOTP) String() string {
+	return base32.StdEncoding.EncodeToString(ho.secret)
 }
 
-func (this *HOTP) URI() string {
-	return this.genURI(this.Type(), 0)
+func (ho *HOTP) URI() string {
+	return ho.genURI(ho.Type(), 0)
 }
 
-func (this *HOTP) PasswordAt(counter uint64) string {
-	binary.BigEndian.PutUint64(this.c, counter)
+func (ho *HOTP) PasswordAt(counter uint64) string {
+	binary.BigEndian.PutUint64(ho.c, counter)
 
-	this.h.Reset()
-	this.h.Write(this.c)
-	ha := make([]byte, 0, this.h.Size())
-	ha = this.h.Sum(ha)
+	ho.h.Reset()
+	ho.h.Write(ho.c)
+	ha := make([]byte, 0, ho.h.Size())
+	ha = ho.h.Sum(ha)
 
 	offset := binary.BigEndian.Uint16(ha[18:20]) & 0xf
 	password32 := binary.BigEndian.Uint32(ha[offset:offset+4]) & 0x7fffffff
 
-	return fmt.Sprintf("%010d", password32)[10-this.Digits() : 10]
+	return fmt.Sprintf("%010d", password32)[10-ho.Digits() : 10]
 }
 
-func (this *HOTP) Password() string {
-	return this.PasswordAt(this.counter)
+func (ho *HOTP) Password() string {
+	return ho.PasswordAt(ho.counter)
 }
 
-func (this *HOTP) Type() string {
+func (ho *HOTP) Type() string {
 	return "hotp"
 }
 
-func (this *HOTP) genURI(otptype string, interval int) string {
-	accountname := strings.Replace(url.QueryEscape(this.account), "+", "%20", -1)
+func (ho *HOTP) genURI(otptype string, interval int) string {
+	accountname := strings.Replace(url.QueryEscape(ho.account), "+", "%20", -1)
 	params := url.Values{}
-	params.Add("secret", this.String())
-	params.Add("algorithm", this.hname)
+	params.Add("secret", ho.String())
+	params.Add("algorithm", ho.hname)
 
 	if otptype == "hotp" {
-		params.Add("counter", strconv.FormatInt(int64(this.counter), 10))
+		params.Add("counter", strconv.FormatInt(int64(ho.counter), 10))
 	} else if otptype == "totp" {
 		params.Add("period", strconv.Itoa(interval))
 	}
 
-	if this.issuer != "" {
-		params.Add("issuer", this.issuer)
-		issuer := strings.Replace(url.QueryEscape(this.issuer), "+", "%20", -1)
+	if ho.issuer != "" {
+		params.Add("issuer", ho.issuer)
+		issuer := strings.Replace(url.QueryEscape(ho.issuer), "+", "%20", -1)
 
 		return fmt.Sprintf(
 			"otpauth://%s/%s:%s?%s",
@@ -234,8 +235,8 @@ func (this *HOTP) genURI(otptype string, interval int) string {
 	)
 }
 
-func (this *HOTP) verifyOTP(password string, counter uint64, window int) int {
-	if len(password) != this.Digits() {
+func (ho *HOTP) verifyOTP(password string, counter uint64, window int) int {
+	if len(password) != ho.Digits() {
 		return -1
 	}
 
@@ -243,7 +244,7 @@ func (this *HOTP) verifyOTP(password string, counter uint64, window int) int {
 	bpassword := []byte(password)
 
 	for i := uint64(0); i < maxcount; i++ {
-		ourpassword := []byte(this.PasswordAt(counter + i))
+		ourpassword := []byte(ho.PasswordAt(counter + i))
 		if subtle.ConstantTimeCompare(ourpassword, bpassword) == 1 {
 			return int(i)
 		}
@@ -252,9 +253,9 @@ func (this *HOTP) verifyOTP(password string, counter uint64, window int) int {
 	return -1
 }
 
-func (this *HOTP) SetInterval(_ int) {}
+func (ho *HOTP) SetInterval(_ int) {}
 
-func (this *HOTP) Interval() int {
+func (ho *HOTP) Interval() int {
 	return 0
 }
 
@@ -263,23 +264,23 @@ type TOTP struct {
 	interval uint64
 }
 
-func (this *TOTP) SetInterval(seconds int) {
-	this.interval = uint64(seconds)
+func (to *TOTP) SetInterval(seconds int) {
+	to.interval = uint64(seconds)
 }
 
-func (this *TOTP) Interval() int {
-	return int(this.interval)
+func (to *TOTP) Interval() int {
+	return int(to.interval)
 }
 
-func (this *TOTP) Verify(password string) bool {
-	counter := uint64(time.Now().Unix()) / this.interval
-	ok := this.HOTP.VerifyAt(password, counter)
+func (to *TOTP) Verify(password string) bool {
+	counter := uint64(time.Now().Unix()) / to.interval
+	ok := to.HOTP.VerifyAt(password, counter)
 
-	if !ok && this.window > 0 {
-		window := uint64(this.window)
+	if !ok && to.window > 0 {
+		window := uint64(to.window)
 
 		for i := uint64(0); i < window; i++ {
-			ok = this.HOTP.VerifyAt(password, counter+i+1) || this.HOTP.VerifyAt(password, counter-i-1)
+			ok = to.HOTP.VerifyAt(password, counter+i+1) || to.HOTP.VerifyAt(password, counter-i-1)
 			if ok {
 				break
 			}
@@ -289,23 +290,23 @@ func (this *TOTP) Verify(password string) bool {
 	return ok
 }
 
-func (this *TOTP) VerifyAt(password string, time uint64) bool {
-	return this.HOTP.VerifyAt(password, time/this.interval)
+func (to *TOTP) VerifyAt(password string, time uint64) bool {
+	return to.HOTP.VerifyAt(password, time/to.interval)
 }
 
-func (this *TOTP) URI() string {
-	return this.genURI(this.Type(), int(this.interval))
+func (to *TOTP) URI() string {
+	return to.genURI(to.Type(), int(to.interval))
 }
 
-func (this *TOTP) Password() string {
-	return this.HOTP.PasswordAt(uint64(time.Now().Unix()) / this.interval)
+func (to *TOTP) Password() string {
+	return to.HOTP.PasswordAt(uint64(time.Now().Unix()) / to.interval)
 }
 
-func (this *TOTP) PasswordAt(time uint64) string {
-	return this.HOTP.PasswordAt(time / this.interval)
+func (to *TOTP) PasswordAt(time uint64) string {
+	return to.HOTP.PasswordAt(time / to.interval)
 }
 
-func (this *TOTP) Type() string {
+func (to *TOTP) Type() string {
 	return "totp"
 }
 

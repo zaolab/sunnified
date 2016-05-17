@@ -5,16 +5,16 @@ type EventTrigger struct {
 	namespace   string
 }
 
-func (this *EventTrigger) Namespace() string {
-	return this.namespace
+func (et *EventTrigger) Namespace() string {
+	return et.namespace
 }
 
-func (this *EventTrigger) EventRouter() *EventRouter {
-	return this.eventrouter
+func (et *EventTrigger) EventRouter() *EventRouter {
+	return et.eventrouter
 }
 
-func (this *EventTrigger) Fire(name string, info map[string]interface{}) {
-	this.eventrouter.route(NewEvent(this.namespace, name, info))
+func (et *EventTrigger) Fire(name string, info map[string]interface{}) {
+	et.eventrouter.route(NewEvent(et.namespace, name, info))
 }
 
 func NewEventTrigger(er *EventRouter, namespace string) *EventTrigger {

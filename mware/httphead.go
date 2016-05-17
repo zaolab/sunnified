@@ -19,22 +19,22 @@ type HTTPHeadMiddleWare struct {
 	defaultHeaders map[string][]string
 }
 
-func (this *HTTPHeadMiddleWare) Request(ctxt *web.Context) {
+func (mw *HTTPHeadMiddleWare) Request(ctxt *web.Context) {
 	h := ctxt.Response.Header()
 
-	for name, val := range this.defaultHeaders {
+	for name, val := range mw.defaultHeaders {
 		for _, v := range val {
 			h.Add(name, v)
 		}
 	}
 }
 
-func (this *HTTPHeadMiddleWare) AddDefaultHeader(name string, value ...string) {
-	if arr, exists := this.defaultHeaders[name]; exists {
-		this.defaultHeaders[name] = append(arr, value...)
+func (mw *HTTPHeadMiddleWare) AddDefaultHeader(name string, value ...string) {
+	if arr, exists := mw.defaultHeaders[name]; exists {
+		mw.defaultHeaders[name] = append(arr, value...)
 	} else {
 		newarr := make([]string, len(value))
 		copy(newarr, value)
-		this.defaultHeaders[name] = newarr
+		mw.defaultHeaders[name] = newarr
 	}
 }

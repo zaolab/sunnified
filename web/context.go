@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zaolab/sunnified/util"
-	"github.com/zaolab/sunnified/util/collection"
-	"github.com/zaolab/sunnified/util/event"
-	"github.com/zaolab/sunnified/util/validate"
 	"io"
 	"log"
 	"net"
@@ -18,10 +14,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
 	"github.com/gorilla/websocket"
+	"github.com/zaolab/sunnified/util"
+	"github.com/zaolab/sunnified/util/collection"
+	"github.com/zaolab/sunnified/util/event"
+	"github.com/zaolab/sunnified/util/validate"
 )
 
-type ResponseWriterChild interface{
+type ResponseWriterChild interface {
 	ParentResponseWriter() http.ResponseWriter
 }
 
@@ -71,24 +72,24 @@ type Context struct {
 	//Router      *router.Router // TODO: change it into an interface so there is no cyclic reference when router uses web.UPath, web.FDATA
 }
 
-func (this *Context) WaitRequestData() error {
-	if !this.parseState.Started() {
-		this.ParseRequestData()
+func (c *Context) WaitRequestData() error {
+	if !c.parseState.Started() {
+		c.ParseRequestData()
 	}
 
-	this.parseState.Status.Wait()
-	return this.parseState.Error
+	c.parseState.Status.Wait()
+	return c.parseState.Error
 }
 
-func (this *Context) parseRequestData(ctype string, body io.ReadCloser) {
+func (c *Context) parseRequestData(ctype string, body io.ReadCloser) {
 	var err error
 
 	defer func() {
 		if panicerr := recover(); panicerr != nil {
 			log.Println(panicerr, err)
-			this.parseState.End(errors.New("Form parsing exited with panic"))
+			c.parseState.End(errors.New("form parsing exited with panic"))
 		} else {
-			this.parseState.End(err)
+			c.parseState.End(err)
 		}
 	}()
 
@@ -97,37 +98,37 @@ func (this *Context) parseRequestData(ctype string, body io.ReadCloser) {
 	}
 
 	if parser := GetContentParser(ctype); parser != nil {
-		this.rdata = parser(body)
-		requestDataToUrlValues(this.Request, this.rdata)
+		c.rdata = parser(body)
+		requestDataToUrlValues(c.Request, c.rdata)
 	} else if ctype == "application/json" {
 		d := json.NewDecoder(body)
 		d.UseNumber()
-		d.Decode(&this.rdata)
-		requestDataToUrlValues(this.Request, this.rdata)
+		d.Decode(&c.rdata)
+		requestDataToUrlValues(c.Request, c.rdata)
 	} else {
 		// 2MB in memory
 		// passing back of ErrNotMultipart is only >= golang1.3
-		if err = this.Request.ParseMultipartForm(2097152); err == http.ErrNotMultipart {
+		if err = c.Request.ParseMultipartForm(2097152); err == http.ErrNotMultipart {
 			err = nil
-		} else if err == nil && this.Request.MultipartForm != nil {
-			if this.Request.PostForm == nil {
-				this.Request.PostForm = make(url.Values)
+		} else if err == nil && c.Request.MultipartForm != nil {
+			if c.Request.PostForm == nil {
+				c.Request.PostForm = make(url.Values)
 			}
-			for k, v := range this.Request.MultipartForm.Value {
-				this.Request.PostForm[k] = append(this.Request.PostForm[k], v...)
+			for k, v := range c.Request.MultipartForm.Value {
+				c.Request.PostForm[k] = append(c.Request.PostForm[k], v...)
 			}
 		}
 	}
 }
 
-func (this *Context) ParseRequestData() {
-	if !this.parseState.Start() {
+func (c *Context) ParseRequestData() {
+	if !c.parseState.Start() {
 		return
 	}
 
 	var (
-		r             = this.Request
-		w             = this.Response
+		r             = c.Request
+		w             = c.Response
 		maxsize int64 = 10485760 //10MB
 	)
 
@@ -139,172 +140,188 @@ func (this *Context) ParseRequestData() {
 			if is100 && r.ContentLength > maxsize {
 				goto expectFailed
 			}
-		} else if this.MaxFileSize > 0 {
-			if maxsize = this.MaxFileSize; is100 && r.ContentLength > maxsize {
+		} else if c.MaxFileSize > 0 {
+			if maxsize = c.MaxFileSize; is100 && r.ContentLength > maxsize {
 				goto expectFailed
 			}
 
 			r.Body = http.MaxBytesReader(w, r.Body, maxsize)
 		}
 
-		go this.parseRequestData(ctype, r.Body)
+		go c.parseRequestData(ctype, r.Body)
 	} else {
 		var err error
 
-		if this.Request.Form == nil {
-			this.Request.Form, err = url.ParseQuery(this.Request.URL.RawQuery)
+		if c.Request.Form == nil {
+			c.Request.Form, err = url.ParseQuery(c.Request.URL.RawQuery)
 		}
 
-		this.parseState.End(err)
+		c.parseState.End(err)
 	}
 
 	return
 
 expectFailed:
 	e := ExpectationError{size: r.ContentLength, maxsize: maxsize}
-	this.parseState.End(e)
+	c.parseState.End(e)
 	w.Header().Set("Connection", "close")
 	panic(e)
 }
 
-func (this *Context) RequestBodyData(ctype string) map[string]interface{} {
-	if ctype == "" || strings.HasPrefix(strings.ToLower(this.Request.Header.Get("Content-Type")), ctype) {
-		return this.rdata
+func (c *Context) RequestBodyData(ctype string) map[string]interface{} {
+	if ctype == "" || strings.HasPrefix(strings.ToLower(c.Request.Header.Get("Content-Type")), ctype) {
+		return c.rdata
 	}
 
 	return nil
 }
 
-func (this *Context) RaiseAppError(err string, status ...int) {
-	this.SetError(err, status...)
-	panic(AppError{code: this.errorcode, err: err})
+func (c *Context) RaiseAppError(err string, status ...int) {
+	c.SetError(err, status...)
+	panic(AppError{code: c.errorcode, err: err})
 }
 
-func (this *Context) SetErrorCode(status int) {
-	this.errorcode = status
+func (c *Context) SetErrorCode(status int) {
+	c.errorcode = status
 }
 
-func (this *Context) ErrorCode() int {
-	return this.errorcode
+func (c *Context) ErrorCode() int {
+	return c.errorcode
 }
 
-func (this *Context) SetError(err string, status ...int) {
+func (c *Context) SetError(err string, status ...int) {
 	if len(status) > 0 {
-		this.errorcode = status[0]
+		c.errorcode = status[0]
 	} else {
-		this.errorcode = 500
+		c.errorcode = 500
 	}
 
-	this.err = err
+	c.err = err
 }
 
-func (this *Context) HasErrorCode() bool {
-	return this.HasError()
+func (c *Context) HasErrorCode() bool {
+	return c.HasError()
 }
 
-func (this *Context) HasError() bool {
-	return this.errorcode != 200 && this.errorcode != 0
+func (c *Context) HasError() bool {
+	return c.errorcode != 200 && c.errorcode != 0
 }
 
-func (this *Context) Error() string {
-	return this.err
+func (c *Context) Error() string {
+	return c.err
 }
 
-func (this *Context) RecoverError() {
-	this.errorcode = 0
-	this.err = ""
+func (c *Context) RecoverError() {
+	c.errorcode = 0
+	c.err = ""
 }
 
-func (this *Context) AppError() (ae AppError) {
-	if this.HasError() {
-		ae = AppError{code: this.errorcode, err: this.err}
+func (c *Context) AppError() (ae AppError) {
+	if c.HasError() {
+		ae = AppError{code: c.errorcode, err: c.err}
 	}
 
 	return
 }
 
-func (this *Context) SetTitle(title string) {
-	if this.SetTitle_ != nil {
-		this.SetTitle_(title)
+func (c *Context) SetTitle(title string) {
+	if c.SetTitle_ != nil {
+		c.SetTitle_(title)
 	}
 }
 
-func (this *Context) ReqHeader(header string) string {
-	return this.Request.Header.Get(header)
+func (c *Context) ReqHeader(header string) string {
+	return c.Request.Header.Get(header)
 }
 
-func (this *Context) ReqHeaderHas(header, value string) bool {
-	return strings.Contains(this.Request.Header.Get(header), value)
+func (c *Context) ReqHeaderHas(header, value string) bool {
+	return strings.Contains(c.Request.Header.Get(header), value)
 }
 
-func (this *Context) ReqHeaderIs(header, value string) bool {
-	return this.Request.Header.Get(header) == value
+func (c *Context) ReqHeaderIs(header, value string) bool {
+	return c.Request.Header.Get(header) == value
 }
 
-func (this *Context) ResHeader(header string) string {
-	return this.Response.Header().Get(header)
+func (c *Context) ResHeader(header string) string {
+	return c.Response.Header().Get(header)
 }
 
-func (this *Context) SetHeader(header, value string) {
-	this.Response.Header().Set(header, value)
+func (c *Context) SetHeader(header, value string) {
+	c.Response.Header().Set(header, value)
 }
 
-func (this *Context) AddHeader(header, value string) {
-	this.Response.Header().Add(header, value)
+func (c *Context) AddHeader(header, value string) {
+	c.Response.Header().Add(header, value)
 }
 
-func (this *Context) StartTime() time.Time {
-	return this.time
+func (c *Context) StartTime() time.Time {
+	return c.time
 }
 
-func (this *Context) SunnyServerId() int {
+func (c *Context) SunnyServerId() int {
 	// to prevent mistaking of sunny server when Context created without
 	// using NewContext
-	if this.issunny {
-		return this.sunnyserver
+	if c.issunny {
+		return c.sunnyserver
 	} else {
 		return -1
 	}
 }
 
-func (this *Context) IsSunnyContext() bool {
-	return this.issunny
+func (c *Context) IsSunnyContext() bool {
+	return c.issunny
 }
 
-func (this *Context) IsRedirecting() bool {
-	return this.redirecting.code > 0
+func (c *Context) IsRedirecting() bool {
+	return c.redirecting.code > 0
 }
 
-func (this *Context) IsHttps() bool {
-	return this.Request.TLS != nil
+func (c *Context) IsHttps() bool {
+	return c.IsHTTPS()
 }
 
-func (this *Context) IsCors() bool {
-	return this.Request.Header.Get("Origin") != ""
+func (c *Context) IsHTTPS() bool {
+	return c.Request.TLS != nil
 }
 
-func (this *Context) IsAjax() bool {
-	return strings.ToLower(this.Request.Header.Get(HTTP_X_REQUESTED_WITH)) == "xmlhttprequest"
+func (c *Context) IsCors() bool {
+	return c.IsCORS()
 }
 
-func (this *Context) IsAjaxOrCors() bool {
-	return this.IsAjax() || this.IsCors()
+func (c *Context) IsCORS() bool {
+	return c.Request.Header.Get("Origin") != ""
 }
 
-func (this *Context) RedirectionCode() int {
-	return this.redirecting.code
+func (c *Context) IsAjax() bool {
+	return c.IsAJAX()
 }
 
-func (this *Context) RedirectionURL() string {
-	return this.redirecting.url
+func (c *Context) IsAJAX() bool {
+	return strings.ToLower(c.Request.Header.Get(HTTP_X_REQUESTED_WITH)) == "xmlhttprequest"
 }
 
-func (this *Context) Redirection() Redirection {
-	return this.redirecting
+func (c *Context) IsAjaxOrCors() bool {
+	return c.IsAJAXOrCORS()
 }
 
-func (this *Context) RemoteAddress() net.IP {
-	raddr := this.Request.RemoteAddr
+func (c *Context) IsAJAXOrCORS() bool {
+	return c.IsAJAX() || c.IsCORS()
+}
+
+func (c *Context) RedirectionCode() int {
+	return c.redirecting.code
+}
+
+func (c *Context) RedirectionURL() string {
+	return c.redirecting.url
+}
+
+func (c *Context) Redirection() Redirection {
+	return c.redirecting
+}
+
+func (c *Context) RemoteAddress() net.IP {
+	raddr := c.Request.RemoteAddr
 	if index := strings.Index(raddr, ":"); index != -1 {
 		raddr = raddr[0:index]
 	}
@@ -312,8 +329,8 @@ func (this *Context) RemoteAddress() net.IP {
 	return net.ParseIP(raddr)
 }
 
-func (this *Context) FwdedForOrRmteAddr() (ip net.IP) {
-	if ipstr := this.Request.Header.Get(HTTP_X_FORWARDED_FOR); ipstr != "" {
+func (c *Context) FwdedForOrRmteAddr() (ip net.IP) {
+	if ipstr := c.Request.Header.Get(HTTP_X_FORWARDED_FOR); ipstr != "" {
 		if cindex := strings.Index(ipstr, ","); cindex != -1 {
 			ip = net.ParseIP(ipstr[0:cindex])
 		} else {
@@ -322,26 +339,26 @@ func (this *Context) FwdedForOrRmteAddr() (ip net.IP) {
 	}
 
 	if ip == nil {
-		ip = this.RemoteAddress()
+		ip = c.RemoteAddress()
 	}
 	return
 }
 
-func (this *Context) XRealIPOrRmteAddr() (ip net.IP) {
-	if ipstr := this.Request.Header.Get(HTTP_X_REAL_IP); ipstr != "" {
+func (c *Context) XRealIPOrRmteAddr() (ip net.IP) {
+	if ipstr := c.Request.Header.Get(HTTP_X_REAL_IP); ipstr != "" {
 		ip = net.ParseIP(ipstr)
 	}
 
 	if ip == nil {
-		ip = this.RemoteAddress()
+		ip = c.RemoteAddress()
 	}
 	return
 }
 
-func (this *Context) ClientIP(pref []string) (ip net.IP) {
+func (c *Context) ClientIP(pref []string) (ip net.IP) {
 	if pref != nil {
 		for _, h := range pref {
-			if ipstr := this.Request.Header.Get(h); ipstr != "" {
+			if ipstr := c.Request.Header.Get(h); ipstr != "" {
 				ip = net.ParseIP(ipstr)
 				if ip != nil {
 					return
@@ -350,50 +367,50 @@ func (this *Context) ClientIP(pref []string) (ip net.IP) {
 		}
 	}
 
-	ip = this.RemoteAddress()
+	ip = c.RemoteAddress()
 	return
 }
 
-func (this *Context) RequestValue(name string) string {
-	if this.Request.Form == nil {
-		this.WaitRequestData()
+func (c *Context) RequestValue(name string) string {
+	if c.Request.Form == nil {
+		c.WaitRequestData()
 	}
-	return this.Request.FormValue(name)
+	return c.Request.FormValue(name)
 }
 
-func (this *Context) RequestValues(name string) []string {
-	if this.Request.Form == nil {
-		this.WaitRequestData()
+func (c *Context) RequestValues(name string) []string {
+	if c.Request.Form == nil {
+		c.WaitRequestData()
 	}
-	return this.Request.Form[name]
+	return c.Request.Form[name]
 }
 
-func (this *Context) PostValue(name string) string {
-	if this.Request.PostForm == nil {
-		this.WaitRequestData()
+func (c *Context) PostValue(name string) string {
+	if c.Request.PostForm == nil {
+		c.WaitRequestData()
 	}
-	return this.Request.PostFormValue(name)
+	return c.Request.PostFormValue(name)
 }
 
-func (this *Context) PostValues(name string) []string {
-	if this.Request.PostForm == nil {
-		this.WaitRequestData()
+func (c *Context) PostValues(name string) []string {
+	if c.Request.PostForm == nil {
+		c.WaitRequestData()
 	}
-	return this.Request.PostForm[name]
+	return c.Request.PostForm[name]
 }
 
-func (this *Context) Method() string {
-	return this.Request.Method
+func (c *Context) Method() string {
+	return c.Request.Method
 }
 
-func (this *Context) XMethod() string {
-	xmeth := this.Request.Method
+func (c *Context) XMethod() string {
+	xmeth := c.Request.Method
 
 	if xmeth == "POST" {
-		tmpxmeth := this.Request.Header.Get(REQMETHOD_X_METHOD_NAME)
+		tmpxmeth := c.Request.Header.Get(REQMETHOD_X_METHOD_NAME)
 
 		if tmpxmeth == "" {
-			tmpxmeth = strings.ToUpper(this.PostValue(REQMETHOD_X_METHOD_NAME))
+			tmpxmeth = strings.ToUpper(c.PostValue(REQMETHOD_X_METHOD_NAME))
 		}
 
 		if validate.IsIn(tmpxmeth, "GET", "POST", "PUT", "PATCH", "DELETE") {
@@ -404,93 +421,93 @@ func (this *Context) XMethod() string {
 	return xmeth
 }
 
-func (this *Context) SetETag(etag string) {
-	this.Response.Header().Set("ETag", etag)
+func (c *Context) SetETag(etag string) {
+	c.Response.Header().Set("ETag", etag)
 }
 
-func (this *Context) SetCookie(c *http.Cookie) {
-	if this.IsHttps() && !c.Secure {
-		c.Secure = true
+func (c *Context) SetCookie(ck *http.Cookie) {
+	if c.IsHttps() && !ck.Secure {
+		ck.Secure = true
 	}
-	http.SetCookie(this.Response, c)
+	http.SetCookie(c.Response, ck)
 }
 
-func (this *Context) SetCookieValue(name, value string) {
-	this.SetCookie(&http.Cookie{
+func (c *Context) SetCookieValue(name, value string) {
+	c.SetCookie(&http.Cookie{
 		Name:  name,
 		Value: value,
 	})
 }
 
-func (this *Context) DeleteCookie(cname string) {
-	this.SetCookie(&http.Cookie{
+func (c *Context) DeleteCookie(cname string) {
+	c.SetCookie(&http.Cookie{
 		Name:   cname,
 		MaxAge: -1,
 	})
 }
 
-func (this *Context) Cookie(cname string) (c *http.Cookie) {
-	c, _ = this.Request.Cookie(cname)
+func (c *Context) Cookie(cname string) (ck *http.Cookie) {
+	ck, _ = c.Request.Cookie(cname)
 	return
 }
 
-func (this *Context) CookieValue(cname string) string {
-	c := this.Cookie(cname)
-	if c != nil {
-		return c.Value
+func (c *Context) CookieValue(cname string) string {
+	ck := c.Cookie(cname)
+	if ck != nil {
+		return ck.Value
 	}
 	return ""
 }
 
-func (this *Context) AddFlash(msg string) {
-	if this.Session != nil {
-		this.Session.AddFlash(msg)
+func (c *Context) AddFlash(msg string) {
+	if c.Session != nil {
+		c.Session.AddFlash(msg)
 	} else {
-		if this.flashcache == nil {
-			this.flashcache = collection.NewQueue(msg)
+		if c.flashcache == nil {
+			c.flashcache = collection.NewQueue(msg)
 		} else {
-			this.flashcache.Push(msg)
+			c.flashcache.Push(msg)
 		}
 	}
 }
 
-func (this *Context) HasFlash() bool {
-	if this.Session != nil {
-		return this.Session.HasFlash()
+func (c *Context) HasFlash() bool {
+	if c.Session != nil {
+		return c.Session.HasFlash()
 	} else {
-		return this.flashcache != nil && this.flashcache.HasQueue()
+		return c.flashcache != nil && c.flashcache.HasQueue()
 	}
 }
 
-func (this *Context) Flash() string {
-	if this.Session != nil {
-		return this.Session.Flash()
-	} else if this.flashcache != nil {
-		return this.flashcache.PullDefault("").(string)
+func (c *Context) Flash() string {
+	if c.Session != nil {
+		return c.Session.Flash()
+	} else if c.flashcache != nil {
+		return c.flashcache.PullDefault("").(string)
 	}
 	return ""
 }
 
-func (this *Context) AllFlashes() []string {
-	if this.Session != nil {
-		return this.Session.AllFlashes()
-	} else if this.flashcache != nil {
-		flashes := this.PeekFlashes()
-		this.flashcache.Clear()
+func (c *Context) AllFlashes() []string {
+	if c.Session != nil {
+		return c.Session.AllFlashes()
+	} else if c.flashcache != nil {
+		flashes := c.PeekFlashes()
+		c.flashcache.Clear()
 		return flashes
 	}
 
 	return nil
 }
 
-func (this *Context) PeekFlashes() []string {
-	if this.Session != nil {
-		return this.Session.PeekFlashes()
-	} else if this.flashcache != nil {
+func (c *Context) PeekFlashes() []string {
+	if c.Session != nil {
+		return c.Session.PeekFlashes()
+	} else if c.flashcache != nil {
 		var flash string
-		flashes := make([]string, 0, this.flashcache.Len())
+		flashes := make([]string, 0, c.flashcache.Len())
 
-		for iter := this.flashcache.Iterator(); iter.Next(&flash); {
+		for iter := c.flashcache.Iterator(); iter.Next(&flash); {
 			flashes = append(flashes, flash)
 		}
 
@@ -500,29 +517,29 @@ func (this *Context) PeekFlashes() []string {
 	return nil
 }
 
-func (this *Context) LenFlashes() int {
-	if this.Session != nil {
-		return this.Session.LenFlashes()
-	} else if this.flashcache != nil {
-		return this.flashcache.Len()
+func (c *Context) LenFlashes() int {
+	if c.Session != nil {
+		return c.Session.LenFlashes()
+	} else if c.flashcache != nil {
+		return c.flashcache.Len()
 	}
 	return 0
 }
 
-func (this *Context) PrivateNoStore() {
-	header := this.Response.Header()
+func (c *Context) PrivateNoStore() {
+	header := c.Response.Header()
 	header.Set("Pragma", "no-cache")
 	header.Set("Cache-Control", "private, max-age=0, no-cache, no-store")
 }
 
-func (this *Context) PrivateNoCache() {
-	header := this.Response.Header()
+func (c *Context) PrivateNoCache() {
+	header := c.Response.Header()
 	header.Set("Pragma", "no-cache")
 	header.Set("Cache-Control", "private, max-age=0, no-cache")
 }
 
-func (this *Context) PublicCache(age int) {
-	header := this.Response.Header()
+func (c *Context) PublicCache(age int) {
+	header := c.Response.Header()
 
 	if pragma, exists := header["Pragma"]; exists {
 		for i, p := range pragma {
@@ -549,33 +566,33 @@ func (this *Context) PublicCache(age int) {
 	header.Set("Cache-Control", "public, max-age="+strconv.Itoa(age))
 }
 
-func (this *Context) SetRedirect(location string, state ...int) int {
+func (c *Context) SetRedirect(location string, state ...int) int {
 	if (strings.HasPrefix(location, "http://") || strings.HasPrefix(location, "https://")) &&
-		!strings.HasPrefix(stripSchema(location), stripSchema(this.URL(""))) {
+		!strings.HasPrefix(stripSchema(location), stripSchema(c.URL(""))) {
 
 		e := RedirectError{url: location}
-		this.SetError(e.Error(), e.Code())
+		c.SetError(e.Error(), e.Code())
 		return 0
 	}
 
-	return this.SetRedirectOut(location, state...)
+	return c.SetRedirectOut(location, state...)
 }
 
-func (this *Context) Redirect(location string, state ...int) {
-	if this.redirecting.code == 0 {
-		state := this.SetRedirect(location, state...)
+func (c *Context) Redirect(location string, state ...int) {
+	if c.redirecting.code == 0 {
+		state := c.SetRedirect(location, state...)
 		if state == 0 {
 			panic(RedirectError{url: location})
 		}
 	}
 
-	panic(this.redirecting)
+	panic(c.redirecting)
 }
 
-func (this *Context) SetRedirectOut(location string, state ...int) (status int) {
-	if this.redirecting.code == 0 {
+func (c *Context) SetRedirectOut(location string, state ...int) (status int) {
+	if c.redirecting.code == 0 {
 		if !strings.HasPrefix(location, "http://") && !strings.HasPrefix(location, "https://") {
-			location = this.URL(location)
+			location = c.URL(location)
 		}
 
 		status = 303
@@ -584,8 +601,8 @@ func (this *Context) SetRedirectOut(location string, state ...int) (status int) 
 			status = state[0]
 		}
 
-		http.Redirect(this.Response, this.Request, location, status)
-		this.redirecting = Redirection{code: status, url: location}
+		http.Redirect(c.Response, c.Request, location, status)
+		c.redirecting = Redirection{code: status, url: location}
 	} else {
 		status = -1
 	}
@@ -593,20 +610,20 @@ func (this *Context) SetRedirectOut(location string, state ...int) (status int) 
 	return
 }
 
-func (this *Context) RedirectOut(location string, state ...int) {
-	if this.redirecting.code == 0 {
-		this.SetRedirectOut(location, state...)
+func (c *Context) RedirectOut(location string, state ...int) {
+	if c.redirecting.code == 0 {
+		c.SetRedirectOut(location, state...)
 	}
 
-	panic(this.redirecting)
+	panic(c.redirecting)
 }
 
-func (this *Context) URL(path string, qstr ...Q) string {
+func (c *Context) URL(path string, qstr ...Q) string {
 	var buf bytes.Buffer
 
 	if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 		buf.WriteString("http")
-		if this.Request.TLS != nil {
+		if c.Request.TLS != nil {
 			buf.WriteByte('s')
 		}
 		buf.WriteString("://")
@@ -614,7 +631,7 @@ func (this *Context) URL(path string, qstr ...Q) string {
 
 	hasstar := strings.HasPrefix(path, "*")
 
-	if host, pathl := strings.ToLower(this.Request.Host), strings.ToLower(path); !strings.Contains(pathl, host) {
+	if host, pathl := strings.ToLower(c.Request.Host), strings.ToLower(path); !strings.Contains(pathl, host) {
 		buf.WriteString(host)
 		if !hasstar && pathl != "" && pathl[0] != '/' {
 			buf.WriteString("/")
@@ -622,7 +639,7 @@ func (this *Context) URL(path string, qstr ...Q) string {
 	}
 
 	if hasstar {
-		upath := this.Request.RequestURI
+		upath := c.Request.RequestURI
 		if upath == "/" {
 			upath = ""
 		} else if upath != "" {
@@ -660,11 +677,11 @@ func (this *Context) URL(path string, qstr ...Q) string {
 	return buf.String()
 }
 
-func (this *Context) URLQ(path string, s ...string) string {
-	return this.URL(path, this.QueryStr(s...))
+func (c *Context) URLQ(path string, s ...string) string {
+	return c.URL(path, c.QueryStr(s...))
 }
 
-func (this *Context) QueryStr(s ...string) (qs Q) {
+func (c *Context) QueryStr(s ...string) (qs Q) {
 	qs = make(Q)
 	isname := true
 	name := ""
@@ -680,33 +697,33 @@ func (this *Context) QueryStr(s ...string) (qs Q) {
 	return
 }
 
-func (this *Context) MapResourceValue(name string, ref interface{}) (err error) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (c *Context) MapResourceValue(name string, ref interface{}) (err error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 
-	if val, ok := this.resource[name]; ok && ref != nil {
+	if val, ok := c.resource[name]; ok && ref != nil {
 		return util.MapValue(ref, val)
 	}
 
 	return ErrResourceNotFound
 }
 
-func (this *Context) Resource(name string) (val interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (c *Context) Resource(name string) (val interface{}) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 
-	val, _ = this.resource[name]
+	val, _ = c.resource[name]
 
 	return
 }
 
-func (this *Context) SetResource(name string, ref interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.resource[name] = ref
+func (c *Context) SetResource(name string, ref interface{}) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.resource[name] = ref
 }
 
-func (this *Context) ToWebSocket(upgrader *websocket.Upgrader, header http.Header) (err error) {
+func (c *Context) ToWebSocket(upgrader *websocket.Upgrader, header http.Header) (err error) {
 	if upgrader == nil {
 		upgrader = &websocket.Upgrader{}
 		upgrader.CheckOrigin = func(_ *http.Request) bool {
@@ -718,12 +735,12 @@ func (this *Context) ToWebSocket(upgrader *websocket.Upgrader, header http.Heade
 		}
 	}
 
-	this.WebSocket, err = upgrader.Upgrade(this.RootResponse(), this.Request, header)
+	c.WebSocket, err = upgrader.Upgrade(c.RootResponse(), c.Request, header)
 	return
 }
 
-func (this *Context) RootResponse() (resp http.ResponseWriter) {
-	resp = this.Response
+func (c *Context) RootResponse() (resp http.ResponseWriter) {
+	resp = c.Response
 
 	for {
 		if cwriter, ok := resp.(ResponseWriterChild); ok {
@@ -736,22 +753,22 @@ func (this *Context) RootResponse() (resp http.ResponseWriter) {
 	return
 }
 
-func (this *Context) Close() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.resource = nil
-	this.Session = nil
-	this.Cache = nil
-	this.Event = nil
-	this.UPath = nil
-	this.PData = nil
-	this.Request = nil
-	this.Response = nil
-	this.SetTitle_ = nil
-	this.rdata = nil
-	if this.WebSocket != nil {
-		this.WebSocket.Close()
-		this.WebSocket = nil
+func (c *Context) Close() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.resource = nil
+	c.Session = nil
+	c.Cache = nil
+	c.Event = nil
+	c.UPath = nil
+	c.PData = nil
+	c.Request = nil
+	c.Response = nil
+	c.SetTitle_ = nil
+	c.rdata = nil
+	if c.WebSocket != nil {
+		c.WebSocket.Close()
+		c.WebSocket = nil
 	}
 }
 

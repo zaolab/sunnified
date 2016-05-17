@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrNonceGenFailed = errors.New("Generating of random nonce failed")
-	ErrNonceMissing   = errors.New("Unable to locate nonce in encrypted message")
+	ErrNonceGenFailed = errors.New("generating of random nonce failed")
+	ErrNonceMissing   = errors.New("unable to locate nonce in encrypted message")
 )
 
 // AesCtrEncrypt encrypts the given msg with the key using AES CTR cipher,

@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
-	//"github.com/bradfitz/gomemcache/memcache"
-	"github.com/zaolab/sunnified/mvc"
-	"github.com/zaolab/sunnified/util/validate"
-	"github.com/zaolab/sunnified/web"
 	"html/template"
 	"io"
 	"log"
 	"mime"
 	"net/http"
 	"strings"
+
+	//"github.com/bradfitz/gomemcache/memcache"
+	"github.com/zaolab/sunnified/mvc"
+	"github.com/zaolab/sunnified/util/validate"
+	"github.com/zaolab/sunnified/web"
 )
 
 type ResultView struct {
@@ -22,59 +23,59 @@ type ResultView struct {
 	fmap    template.FuncMap
 }
 
-func (this *ResultView) SetViewFunc(name string, f interface{}) {
-	if this.fmap == nil {
-		this.fmap = template.FuncMap{}
+func (rv *ResultView) SetViewFunc(name string, f interface{}) {
+	if rv.fmap == nil {
+		rv.fmap = template.FuncMap{}
 	}
-	this.fmap[name] = f
+	rv.fmap[name] = f
 }
 
-func (this *ResultView) SetViewFuncName(name string) {
-	if this.fmap == nil {
-		this.fmap = template.FuncMap{}
+func (rv *ResultView) SetViewFuncName(name string) {
+	if rv.fmap == nil {
+		rv.fmap = template.FuncMap{}
 	}
 
-	if _, exists := this.fmap[name]; !exists {
-		this.fmap[name] = func(i ...interface{}) string { return "" }
+	if _, exists := rv.fmap[name]; !exists {
+		rv.fmap[name] = func(i ...interface{}) string { return "" }
 	}
 }
 
-func (this *ResultView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
-	this.GetTmpl = f
+func (rv *ResultView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
+	rv.GetTmpl = f
 }
 
-func (this *ResultView) SetVMap(vmap ...mvc.VM) {
-	if this.VM == nil {
-		this.VM = mvc.VM{}
+func (rv *ResultView) SetVMap(vmap ...mvc.VM) {
+	if rv.VM == nil {
+		rv.VM = mvc.VM{}
 	}
 	for _, vm := range vmap {
 		for k, v := range vm {
-			this.VM[k] = v
+			rv.VM[k] = v
 		}
 	}
 }
 
-func (this *ResultView) SetData(name string, value interface{}) {
-	if this.VM == nil {
-		this.VM = mvc.VM{}
+func (rv *ResultView) SetData(name string, value interface{}) {
+	if rv.VM == nil {
+		rv.VM = mvc.VM{}
 	}
-	this.VM[name] = value
+	rv.VM[name] = value
 }
 
-func (this *ResultView) ContentType(ctxt *web.Context) string {
+func (rv *ResultView) ContentType(ctxt *web.Context) string {
 	return GetContentType(mvc.GetMvcMeta(ctxt)[mvc.MVC_TYPE])
 }
 
-func (this *ResultView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
+func (rv *ResultView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
 	ext = names[mvc.MVC_TYPE]
 
-	if this.GetTmpl != nil {
-		tmpl, err = this.GetTmpl(this.fmap)
+	if rv.GetTmpl != nil {
+		tmpl, err = rv.GetTmpl(rv.fmap)
 	} else {
-		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), this.fmap)
+		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), rv.fmap)
 
 		if err != nil && ext != ".html" {
-			tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ".html"), this.fmap)
+			tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ".html"), rv.fmap)
 			ext = ".html"
 		}
 	}
@@ -82,8 +83,8 @@ func (this *ResultView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext
 	return
 }
 
-func (this *ResultView) Render(ctxt *web.Context) (b []byte, err error) {
-	if tmpl, ext, err := this.getTmpl(mvc.GetMvcMeta(ctxt)); err == nil {
+func (rv *ResultView) Render(ctxt *web.Context) (b []byte, err error) {
+	if tmpl, ext, err := rv.getTmpl(mvc.GetMvcMeta(ctxt)); err == nil {
 		buf := &bytes.Buffer{}
 		var jsonp string
 		if ext == ".jsonp" {
@@ -96,7 +97,7 @@ func (this *ResultView) Render(ctxt *web.Context) (b []byte, err error) {
 		if jsonp != "" {
 			writeJsonpStart(jsonp, buf)
 		}
-		tmpl.Execute(buf, this.VM)
+		tmpl.Execute(buf, rv.VM)
 		if jsonp != "" {
 			writeJsonpEnd(jsonp, buf)
 		}
@@ -106,16 +107,16 @@ func (this *ResultView) Render(ctxt *web.Context) (b []byte, err error) {
 	return
 }
 
-func (this *ResultView) RenderString(ctxt *web.Context) (s string, err error) {
+func (rv *ResultView) RenderString(ctxt *web.Context) (s string, err error) {
 	var b []byte
-	b, err = this.Render(ctxt)
+	b, err = rv.Render(ctxt)
 	if err == nil {
 		s = string(b)
 	}
 	return
 }
 
-func (this *ResultView) Publish(ctxt *web.Context) (err error) {
+func (rv *ResultView) Publish(ctxt *web.Context) (err error) {
 	names := mvc.GetMvcMeta(ctxt)
 	if names[mvc.MVC_ACTION] == "" {
 		names[mvc.MVC_ACTION] = "_"
@@ -136,7 +137,7 @@ func (this *ResultView) Publish(ctxt *web.Context) (err error) {
 			return
 		}
 	*/
-	tmpl, ext, err = this.getTmpl(names)
+	tmpl, ext, err = rv.getTmpl(names)
 
 	if err == nil {
 		var isjsonp bool
@@ -183,7 +184,7 @@ func (this *ResultView) Publish(ctxt *web.Context) (err error) {
 				writeJsonpStart(jsonp, tw)
 			}
 
-			err = tmpl.Execute(tw, this.VM)
+			err = tmpl.Execute(tw, rv.VM)
 
 			if err != nil {
 				// Header already sent... multiple write headers

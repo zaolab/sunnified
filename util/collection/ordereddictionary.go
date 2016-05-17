@@ -3,9 +3,10 @@ package collection
 import (
 	"bytes"
 	"fmt"
-	"github.com/zaolab/sunnified/util"
 	"sort"
 	"sync"
+
+	"github.com/zaolab/sunnified/util"
 )
 
 type datachain struct {
@@ -39,16 +40,16 @@ func NewOrderedDict(def interface{}, m ...map[interface{}]interface{}) (d *Order
 	return
 }
 
-func (this *OrderedDict) Len() int {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return len(this.prevchain)
+func (od *OrderedDict) Len() int {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+	return len(od.prevchain)
 }
 
-func (this *OrderedDict) getvalue(key interface{}) (interface{}, bool) {
-	this.mutex.RLock()
-	chain, ok := this.prevchain[key]
-	this.mutex.RUnlock()
+func (od *OrderedDict) getvalue(key interface{}) (interface{}, bool) {
+	od.mutex.RLock()
+	chain, ok := od.prevchain[key]
+	od.mutex.RUnlock()
 
 	if ok {
 		return chain.next.value, true
@@ -57,68 +58,68 @@ func (this *OrderedDict) getvalue(key interface{}) (interface{}, bool) {
 	return nil, false
 }
 
-func (this *OrderedDict) MapValue(key interface{}, value interface{}) (val interface{}) {
-	if val = this.Get(key); val != nil && value != nil {
+func (od *OrderedDict) MapValue(key interface{}, value interface{}) (val interface{}) {
+	if val = od.Get(key); val != nil && value != nil {
 		util.MapValue(value, val)
 	}
 	return
 }
 
-func (this *OrderedDict) Set(key interface{}, value interface{}) Dictionary {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.set(key, value)
-	return this
+func (od *OrderedDict) Set(key interface{}, value interface{}) Dictionary {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	od.set(key, value)
+	return od
 }
 
-func (this *OrderedDict) set(key interface{}, value interface{}) {
-	if prevchain, exists := this.prevchain[key]; exists {
+func (od *OrderedDict) set(key interface{}, value interface{}) {
+	if prevchain, exists := od.prevchain[key]; exists {
 		prevchain.next.value = value
 	} else {
-		this.appendItem(key, value)
+		od.appendItem(key, value)
 	}
 }
 
-func (this *OrderedDict) appendItem(key interface{}, value interface{}) {
+func (od *OrderedDict) appendItem(key interface{}, value interface{}) {
 	dchain := &datachain{
 		key:   key,
 		value: value,
 	}
 	var prevchain *datachain
 
-	if this.tailchain == nil {
-		this.tailchain = dchain
-		this.headchain.next = dchain
-		prevchain = this.headchain
+	if od.tailchain == nil {
+		od.tailchain = dchain
+		od.headchain.next = dchain
+		prevchain = od.headchain
 	} else {
-		this.tailchain.next = dchain
-		prevchain = this.tailchain
-		this.tailchain = dchain
+		od.tailchain.next = dchain
+		prevchain = od.tailchain
+		od.tailchain = dchain
 	}
 
-	this.prevchain[key] = prevchain
+	od.prevchain[key] = prevchain
 }
 
-func (this *OrderedDict) SetDefault(key interface{}, value interface{}) Dictionary {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if _, exists := this.prevchain[key]; !exists {
-		this.appendItem(key, value)
+func (od *OrderedDict) SetDefault(key interface{}, value interface{}) Dictionary {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	if _, exists := od.prevchain[key]; !exists {
+		od.appendItem(key, value)
 	}
-	return this
+	return od
 }
 
-func (this *OrderedDict) Keys() []interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Keys() []interface{} {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	return this.keys()
+	return od.keys()
 }
 
-func (this *OrderedDict) keys() (keys []interface{}) {
-	lendict := len(this.prevchain)
+func (od *OrderedDict) keys() (keys []interface{}) {
+	lendict := len(od.prevchain)
 	keys = make([]interface{}, lendict)
-	seekchain := this.headchain.next
+	seekchain := od.headchain.next
 
 	for i := 0; i < lendict; i++ {
 		keys[i] = seekchain.key
@@ -128,17 +129,17 @@ func (this *OrderedDict) keys() (keys []interface{}) {
 	return
 }
 
-func (this *OrderedDict) Values() []interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Values() []interface{} {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	return this.values()
+	return od.values()
 }
 
-func (this *OrderedDict) values() (values []interface{}) {
-	lendict := len(this.prevchain)
+func (od *OrderedDict) values() (values []interface{}) {
+	lendict := len(od.prevchain)
 	values = make([]interface{}, lendict)
-	seekchain := this.headchain.next
+	seekchain := od.headchain.next
 
 	for i := 0; i < lendict; i++ {
 		values[i] = seekchain.value
@@ -148,17 +149,17 @@ func (this *OrderedDict) values() (values []interface{}) {
 	return
 }
 
-func (this *OrderedDict) KeysValues() ([]interface{}, []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.keysValues()
+func (od *OrderedDict) KeysValues() ([]interface{}, []interface{}) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+	return od.keysValues()
 }
 
-func (this *OrderedDict) keysValues() (keys []interface{}, values []interface{}) {
-	lendict := len(this.prevchain)
+func (od *OrderedDict) keysValues() (keys []interface{}, values []interface{}) {
+	lendict := len(od.prevchain)
 	keys = make([]interface{}, lendict)
 	values = make([]interface{}, lendict)
-	seekchain := this.headchain.next
+	seekchain := od.headchain.next
 
 	for i := 0; i < lendict; i++ {
 		keys[i] = seekchain.key
@@ -169,13 +170,13 @@ func (this *OrderedDict) keysValues() (keys []interface{}, values []interface{})
 	return
 }
 
-func (this *OrderedDict) Pairs() (pairs [][2]interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Pairs() (pairs [][2]interface{}) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	lendict := len(this.prevchain)
+	lendict := len(od.prevchain)
 	pairs = make([][2]interface{}, lendict)
-	seekchain := this.headchain.next
+	seekchain := od.headchain.next
 
 	for i := 0; i < lendict; i++ {
 		pairs[i] = [2]interface{}{seekchain.key, seekchain.value}
@@ -185,19 +186,19 @@ func (this *OrderedDict) Pairs() (pairs [][2]interface{}) {
 	return
 }
 
-func (this *OrderedDict) HasKey(key interface{}) (exists bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	_, exists = this.prevchain[key]
+func (od *OrderedDict) HasKey(key interface{}) (exists bool) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+	_, exists = od.prevchain[key]
 	return
 }
 
-func (this *OrderedDict) Contains(values ...interface{}) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Contains(values ...interface{}) bool {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
 	for _, val := range values {
-		if !this.hasValue(val) {
+		if !od.hasValue(val) {
 			return false
 		}
 	}
@@ -205,7 +206,7 @@ func (this *OrderedDict) Contains(values ...interface{}) bool {
 	return true
 }
 
-func (this *OrderedDict) hasValue(value interface{}) bool {
+func (od *OrderedDict) hasValue(value interface{}) bool {
 	/* TODO: perform benchmark
 	however this is unordered
 	for _, prevchain := range this.prevchain {
@@ -214,7 +215,7 @@ func (this *OrderedDict) hasValue(value interface{}) bool {
 		}
 	}
 	*/
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if seek.value == value {
 			return true
 		}
@@ -222,11 +223,11 @@ func (this *OrderedDict) hasValue(value interface{}) bool {
 	return false
 }
 
-func (this *OrderedDict) KeyOf(value interface{}) interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) KeyOf(value interface{}) interface{} {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if seek.value == value {
 			return seek.key
 		}
@@ -235,17 +236,17 @@ func (this *OrderedDict) KeyOf(value interface{}) interface{} {
 	return nil
 }
 
-func (this *OrderedDict) KeysOf(value interface{}) (keys []interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) KeysOf(value interface{}) (keys []interface{}) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	return this.keysOf(value)
+	return od.keysOf(value)
 }
 
-func (this *OrderedDict) keysOf(value interface{}) (keys []interface{}) {
+func (od *OrderedDict) keysOf(value interface{}) (keys []interface{}) {
 	keys = make([]interface{}, 0, 2)
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if seek.value == value {
 			keys = append(keys, seek.key)
 		}
@@ -254,126 +255,126 @@ func (this *OrderedDict) keysOf(value interface{}) (keys []interface{}) {
 	return
 }
 
-func (this *OrderedDict) RemoveAt(key interface{}) interface{} {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	return this.removeAt(key)
+func (od *OrderedDict) RemoveAt(key interface{}) interface{} {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	return od.removeAt(key)
 }
 
-func (this *OrderedDict) removeAt(key interface{}) (value interface{}) {
-	if prevchain, exists := this.prevchain[key]; exists {
-		delete(this.prevchain, key)
+func (od *OrderedDict) removeAt(key interface{}) (value interface{}) {
+	if prevchain, exists := od.prevchain[key]; exists {
+		delete(od.prevchain, key)
 		value = prevchain.next.value
 
 		if prevchain.next.next == nil {
-			this.tailchain = nil
+			od.tailchain = nil
 		} else {
-			this.prevchain[prevchain.next.next.key] = prevchain
+			od.prevchain[prevchain.next.next.key] = prevchain
 			prevchain.next = prevchain.next.next
 		}
 	}
 	return
 }
 
-func (this *OrderedDict) Remove(value interface{}) (keys []interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	keys = this.keysOf(value)
+func (od *OrderedDict) Remove(value interface{}) (keys []interface{}) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	keys = od.keysOf(value)
 	for _, key := range keys {
-		this.removeAt(key)
+		od.removeAt(key)
 	}
 	return
 }
 
-func (this *OrderedDict) Pop() (key interface{}, value interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if this.tailchain != nil {
-		key, value = this.tailchain.key, this.tailchain.value
-		prevchain := this.prevchain[key]
+func (od *OrderedDict) Pop() (key interface{}, value interface{}) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	if od.tailchain != nil {
+		key, value = od.tailchain.key, od.tailchain.value
+		prevchain := od.prevchain[key]
 		prevchain.next = nil
 
-		delete(this.prevchain, key)
+		delete(od.prevchain, key)
 
-		if prevchain != this.headchain {
-			this.tailchain = prevchain
+		if prevchain != od.headchain {
+			od.tailchain = prevchain
 		} else {
-			this.tailchain = nil
+			od.tailchain = nil
 		}
 	}
 	return
 }
 
-func (this *OrderedDict) Update(m map[interface{}]interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) Update(m map[interface{}]interface{}) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 	for k, v := range m {
-		this.set(k, v)
+		od.set(k, v)
 	}
 }
 
-func (this *OrderedDict) UpdateDictionary(d Dictionary) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) UpdateDictionary(d Dictionary) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 	var key, value interface{}
 
 	for iter := d.Iterator(); iter.Next(&key, &value); {
-		this.set(key, value)
+		od.set(key, value)
 	}
 }
 
-func (this *OrderedDict) UpdateDict(d *Dict) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) UpdateDict(d *Dict) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	for k, v := range d.dict {
-		this.set(k, v)
+		od.set(k, v)
 	}
 }
 
-func (this *OrderedDict) UpdateOrderedDict(d *OrderedDict) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) UpdateOrderedDict(d *OrderedDict) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	for seek := d.headchain.next; seek != nil; seek = seek.next {
-		this.set(seek.key, seek.value)
+		od.set(seek.key, seek.value)
 	}
 }
 
-func (this *OrderedDict) ToMap() map[interface{}]interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.toMap()
+func (od *OrderedDict) ToMap() map[interface{}]interface{} {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+	return od.toMap()
 }
 
-func (this *OrderedDict) toMap() (m map[interface{}]interface{}) {
+func (od *OrderedDict) toMap() (m map[interface{}]interface{}) {
 	m = make(map[interface{}]interface{})
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		m[seek.key] = seek.value
 	}
 
 	return
 }
 
-func (this *OrderedDict) Clone() *OrderedDict {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.clone()
+func (od *OrderedDict) Clone() *OrderedDict {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
+	return od.clone()
 }
 
-func (this *OrderedDict) clone() *OrderedDict {
+func (od *OrderedDict) clone() *OrderedDict {
 	var (
 		m         = make(map[interface{}]*datachain)
 		headchain = &datachain{}
 		prevchain = headchain
 	)
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		prevchain.next = &datachain{
 			key:   seek.key,
 			value: seek.value,
@@ -386,24 +387,24 @@ func (this *OrderedDict) clone() *OrderedDict {
 		prevchain: m,
 		headchain: headchain,
 		tailchain: prevchain,
-		def:       this.def,
+		def:       od.def,
 		mutex:     &sync.RWMutex{},
 	}
 }
 
-func (this *OrderedDict) String() string {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) String() string {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
 	// 5 overhead bytes "map[]" + 2 inner bytes ": " + 2 min key+value
-	b := make([]byte, 4, 5+(this.Len()*4))
+	b := make([]byte, 4, 5+(od.Len()*4))
 	b[0] = 'm'
 	b[1] = 'a'
 	b[2] = 'p'
 	b[3] = '['
 	var buf = bytes.NewBuffer(b)
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		fmt.Fprintf(buf, "%v", seek.key)
 		buf.WriteByte(':')
 		fmt.Fprintf(buf, "%v", seek.value)
@@ -416,51 +417,51 @@ func (this *OrderedDict) String() string {
 	return buf.String()
 }
 
-func (this *OrderedDict) lock() {
-	this.mutex.Lock()
+func (od *OrderedDict) lock() {
+	od.mutex.Lock()
 }
 
-func (this *OrderedDict) unlock() {
-	this.mutex.Unlock()
+func (od *OrderedDict) unlock() {
+	od.mutex.Unlock()
 }
 
-func (this *OrderedDict) Clear() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	this.prevchain = make(map[interface{}]*datachain)
-	this.headchain.next = nil
-	this.tailchain = nil
+func (od *OrderedDict) Clear() {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
+	od.prevchain = make(map[interface{}]*datachain)
+	od.headchain.next = nil
+	od.tailchain = nil
 }
 
-func (this *OrderedDict) Transaction(f func(ExtendedDictionary) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) Transaction(f func(ExtendedDictionary) bool) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 
-	clone := this.clone()
+	clone := od.clone()
 
 	if ok := f(clone); ok {
-		this.prevchain = clone.prevchain
-		this.headchain = clone.headchain
-		this.tailchain = clone.tailchain
+		od.prevchain = clone.prevchain
+		od.headchain = clone.headchain
+		od.tailchain = clone.tailchain
 	}
 }
 
-func (this *OrderedDict) Foreach(f func(interface{}, interface{}) bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Foreach(f func(interface{}, interface{}) bool) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if !f(seek.key, seek.value) {
 			break
 		}
 	}
 }
 
-func (this *OrderedDict) IsMatch(f func(interface{}) bool) bool {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) IsMatch(f func(interface{}) bool) bool {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if f(seek.value) {
 			return true
 		}
@@ -469,11 +470,11 @@ func (this *OrderedDict) IsMatch(f func(interface{}) bool) bool {
 	return false
 }
 
-func (this *OrderedDict) Match(f func(interface{}) bool) (interface{}, interface{}) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Match(f func(interface{}) bool) (interface{}, interface{}) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 
-	for seek := this.headchain.next; seek != nil; seek = seek.next {
+	for seek := od.headchain.next; seek != nil; seek = seek.next {
 		if f(seek.value) {
 			return seek.key, seek.value
 		}
@@ -481,48 +482,48 @@ func (this *OrderedDict) Match(f func(interface{}) bool) (interface{}, interface
 	return nil, nil
 }
 
-func (this *OrderedDict) Iterator() (di Iterator) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (od *OrderedDict) Iterator() (di Iterator) {
+	od.mutex.RLock()
+	defer od.mutex.RUnlock()
 	di = &OrderedDictIterator{
-		headchain: this.headchain.next,
-		mutex:     this.mutex,
+		headchain: od.headchain.next,
+		mutex:     od.mutex,
 	}
 	return
 }
 
-func (this *OrderedDict) Reverse() {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) Reverse() {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 
-	lendict := len(this.prevchain)
+	lendict := len(od.prevchain)
 
 	if lendict > 1 {
-		curchain := this.tailchain
-		prevchain := this.headchain
+		curchain := od.tailchain
+		prevchain := od.headchain
 
 		for i := 0; i < lendict; i++ {
 			thiskey := curchain.key
 			prevchain.next = curchain
-			this.prevchain[thiskey], curchain = prevchain, this.prevchain[thiskey]
+			od.prevchain[thiskey], curchain = prevchain, od.prevchain[thiskey]
 			prevchain = prevchain.next
 		}
 	}
 }
 
-func (this *OrderedDict) Sort(less func(x interface{}, y interface{}) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) Sort(less func(x interface{}, y interface{}) bool) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 
 	if less == nil {
 		less = Less
 	}
 
 	sortlist := &SortDictValue{
-		lenlist: len(this.prevchain),
+		lenlist: len(od.prevchain),
 		lessf:   less,
 	}
-	sortlist.keys, sortlist.values = this.keysValues()
+	sortlist.keys, sortlist.values = od.keysValues()
 
 	sort.Sort(sortlist)
 
@@ -541,22 +542,22 @@ func (this *OrderedDict) Sort(less func(x interface{}, y interface{}) bool) {
 		prevchain = prevchain.next
 	}
 
-	this.prevchain = m
-	this.headchain = headchain
-	this.tailchain = prevchain
+	od.prevchain = m
+	od.headchain = headchain
+	od.tailchain = prevchain
 }
 
-func (this *OrderedDict) SortByKey(less func(x interface{}, y interface{}) bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+func (od *OrderedDict) SortByKey(less func(x interface{}, y interface{}) bool) {
+	od.mutex.Lock()
+	defer od.mutex.Unlock()
 
 	if less == nil {
 		less = Less
 	}
 
 	sortlist := &SortList{
-		list:    this.keys(),
-		lenlist: len(this.prevchain),
+		list:    od.keys(),
+		lenlist: len(od.prevchain),
 		lessf:   less,
 	}
 
@@ -571,15 +572,15 @@ func (this *OrderedDict) SortByKey(less func(x interface{}, y interface{}) bool)
 	for _, key := range sortlist.list {
 		prevchain.next = &datachain{
 			key:   key,
-			value: this.prevchain[key].next.value,
+			value: od.prevchain[key].next.value,
 		}
 		m[key] = prevchain
 		prevchain = prevchain.next
 	}
 
-	this.prevchain = m
-	this.headchain = headchain
-	this.tailchain = prevchain
+	od.prevchain = m
+	od.headchain = headchain
+	od.tailchain = prevchain
 }
 
 type SortDictValue struct {
@@ -589,17 +590,17 @@ type SortDictValue struct {
 	lessf   func(x interface{}, y interface{}) bool
 }
 
-func (this *SortDictValue) Len() int {
-	return this.lenlist
+func (sd *SortDictValue) Len() int {
+	return sd.lenlist
 }
 
-func (this *SortDictValue) Less(x int, y int) bool {
-	return this.lessf(this.values[x], this.values[y])
+func (sd *SortDictValue) Less(x int, y int) bool {
+	return sd.lessf(sd.values[x], sd.values[y])
 }
 
-func (this *SortDictValue) Swap(x int, y int) {
-	this.values[x], this.values[y] = this.values[y], this.values[x]
-	this.keys[x], this.keys[y] = this.keys[y], this.keys[x]
+func (sd *SortDictValue) Swap(x int, y int) {
+	sd.values[x], sd.values[y] = sd.values[y], sd.values[x]
+	sd.keys[x], sd.keys[y] = sd.keys[y], sd.keys[x]
 }
 
 type OrderedDictIterator struct {
@@ -610,40 +611,40 @@ type OrderedDictIterator struct {
 	value     interface{}
 }
 
-func (this *OrderedDictIterator) Next(val ...interface{}) (ok bool) {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+func (di *OrderedDictIterator) Next(val ...interface{}) (ok bool) {
+	di.mutex.RLock()
+	defer di.mutex.RUnlock()
 
-	if this.seek == nil {
-		this.seek = this.headchain
+	if di.seek == nil {
+		di.seek = di.headchain
 	} else {
-		this.seek = this.seek.next
+		di.seek = di.seek.next
 	}
 
-	if ok = this.seek != nil; ok {
-		this.key = this.seek.key
-		this.value = this.seek.value
+	if ok = di.seek != nil; ok {
+		di.key = di.seek.key
+		di.value = di.seek.value
 
 		if lenval := len(val); lenval == 1 {
-			util.MapValue(val[0], this.value)
+			util.MapValue(val[0], di.value)
 		} else if lenval == 2 {
-			util.MapValue(val[0], this.key)
-			util.MapValue(val[1], this.value)
+			util.MapValue(val[0], di.key)
+			util.MapValue(val[1], di.value)
 		}
 	} else {
-		this.key = nil
-		this.value = nil
+		di.key = nil
+		di.value = nil
 	}
 
 	return
 }
 
-func (this *OrderedDictIterator) Get() (interface{}, interface{}) {
-	return this.key, this.value
+func (di *OrderedDictIterator) Get() (interface{}, interface{}) {
+	return di.key, di.value
 }
 
-func (this *OrderedDictIterator) Reset() {
-	this.seek = nil
-	this.key = nil
-	this.value = nil
+func (di *OrderedDictIterator) Reset() {
+	di.seek = nil
+	di.key = nil
+	di.value = nil
 }
