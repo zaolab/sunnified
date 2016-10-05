@@ -9,26 +9,26 @@ type Listener func(*Event)
 
 type M map[string]interface{}
 
-type EventRouter struct {
-	base      *EventRouter
+type Router struct {
+	base      *Router
 	mutex     sync.RWMutex
 	metas     M
 	listeners map[string][]Listener
 }
 
-func (er *EventRouter) CreateTrigger(namespace string) *EventTrigger {
+func (er *Router) CreateTrigger(namespace string) *Trigger {
 	return NewEventTrigger(er, namespace)
 }
 
-func (er *EventRouter) IsSubRouter() bool {
+func (er *Router) IsSubRouter() bool {
 	return er.base != nil
 }
 
-func (er *EventRouter) SubRouter() *EventRouter {
+func (er *Router) SubRouter() *Router {
 	return er.base
 }
 
-func (er *EventRouter) route(event *Event) {
+func (er *Router) route(event *Event) {
 	if event != nil && er.metas != nil {
 		if event.metas == nil {
 			event.metas = make(M)
@@ -42,7 +42,7 @@ func (er *EventRouter) route(event *Event) {
 
 		er.mutex.RLock()
 		defer er.mutex.RUnlock()
-		if lis, exists := er.listeners[JoinId(event.namespace, event.name)]; exists {
+		if lis, exists := er.listeners[JoinID(event.namespace, event.name)]; exists {
 			for _, f := range lis {
 				f(event)
 			}
@@ -54,7 +54,7 @@ func (er *EventRouter) route(event *Event) {
 	}
 }
 
-func (er *EventRouter) Listen(id string, f Listener) {
+func (er *Router) Listen(id string, f Listener) {
 	er.mutex.Lock()
 	defer er.mutex.Unlock()
 	if _, exists := er.listeners[id]; !exists {
@@ -64,25 +64,25 @@ func (er *EventRouter) Listen(id string, f Listener) {
 	er.listeners[id] = append(er.listeners[id], f)
 }
 
-func (er *EventRouter) NewSubRouter(metas M) *EventRouter {
-	return &EventRouter{
+func (er *Router) NewSubRouter(metas M) *Router {
+	return &Router{
 		metas: metas,
 		base:  er,
 	}
 }
 
-func NewEventRouter(metas M) *EventRouter {
-	return &EventRouter{
+func NewEventRouter(metas M) *Router {
+	return &Router{
 		metas:     metas,
 		listeners: make(map[string][]Listener),
 	}
 }
 
-func SplitId(id string) (string, string) {
+func SplitID(id string) (string, string) {
 	idsplit := strings.SplitN(id, ".", 2)
 	return idsplit[0], idsplit[1]
 }
 
-func JoinId(namespace, name string) string {
+func JoinID(namespace, name string) string {
 	return namespace + "." + name
 }

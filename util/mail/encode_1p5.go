@@ -44,16 +44,16 @@ func (me *MessageEncoder) String() string {
 	me.Writer.Close()
 	if me.b.Len() > 0 {
 		return me.b.String()
-	} else {
-		return ""
 	}
+
+	return ""
 }
 
 func (me *MessageEncoder) Bytes() []byte {
 	me.Writer.Close()
 	if me.b.Len() > 0 {
 		return me.b.Bytes()
-	} else {
-		return ""
 	}
+
+	return ""
 }

@@ -46,7 +46,7 @@ type Router interface {
 	Handle(string, interface{}, ...string) EndPoint
 }
 
-type RouterPathPrefix interface {
+type PathPrefix interface {
 	SetPathPrefix(path string, canon string)
 	PathPrefix() string
 	FullPathPrefix() string // the full path prefix including its parent's & ancestors'
@@ -54,7 +54,7 @@ type RouterPathPrefix interface {
 	FullPathPrefixCanon() string
 }
 
-type RouterHost interface {
+type Host interface {
 	SetHost(host string, canon string)
 	Host() string
 	FullHost() string
@@ -189,14 +189,14 @@ func (sr *SunnyRouter) FullHost() string {
 	getParentHost = func(rt Router) string {
 		p := rt.Parent()
 		if p != nil {
-			if pp, ok := p.(RouterHost); ok {
+			if pp, ok := p.(Host); ok {
 				return pp.FullHost()
-			} else {
-				return getParentHost(p)
 			}
-		} else {
-			return ""
+
+			return getParentHost(p)
 		}
+
+		return ""
 	}
 
 	if h := getParentHost(sr); h != "" {
@@ -220,14 +220,14 @@ func (sr *SunnyRouter) FullHostCanon() string {
 	getParentHost = func(rt Router) string {
 		p := rt.Parent()
 		if p != nil {
-			if pp, ok := p.(RouterHost); ok {
+			if pp, ok := p.(Host); ok {
 				return pp.FullHostCanon()
-			} else {
-				return getParentHost(p)
 			}
-		} else {
-			return ""
+
+			return getParentHost(p)
 		}
+
+		return ""
 	}
 
 	if h := getParentHost(sr); h != "" {
@@ -339,7 +339,7 @@ func (sr *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}) 
 		lenh := len(h)
 		lenhost := len(host)
 		h = h[1:lenh]
-		lenh -= 1
+		lenh--
 
 		if lenhost < lenh || (lenhost > lenh && host[lenhost-lenh-1] != '.') {
 			return false, value
@@ -348,9 +348,9 @@ func (sr *SunnyRouter) MatchHost(r *http.Request, value map[string]interface{}) 
 		if host[lenhost-lenh:lenhost] == h {
 			value["host"] = host[0 : lenhost-lenh]
 			return true, value
-		} else {
-			return false, value
 		}
+
+		return false, value
 	}
 
 	return host == h, value
@@ -389,9 +389,9 @@ func (sr *SunnyRouter) MatchPathPrefix(r *http.Request, value map[string]interfa
 		if sr.pathprefix == "" || (lenv > lenpp && v[0:lenpp] == sr.pathprefix) {
 			value["pathprefix"] = v[lenpp:lenv]
 			return true, value
-		} else {
-			return false, value
 		}
+
+		return false, value
 	}
 
 	var (
@@ -421,14 +421,14 @@ func (sr *SunnyRouter) FullPathPrefix() string {
 	getParentPath = func(rt Router) string {
 		p := rt.Parent()
 		if p != nil {
-			if pp, ok := p.(RouterPathPrefix); ok {
+			if pp, ok := p.(PathPrefix); ok {
 				return pp.FullPathPrefix()
-			} else {
-				return getParentPath(p)
 			}
-		} else {
-			return ""
+
+			return getParentPath(p)
 		}
+
+		return ""
 	}
 
 	if prefix := getParentPath(sr); prefix != "" {
@@ -448,14 +448,13 @@ func (sr *SunnyRouter) FullPathPrefixCanon() string {
 	getParentPath = func(rt Router) string {
 		p := rt.Parent()
 		if p != nil {
-			if pp, ok := p.(RouterPathPrefix); ok {
+			if pp, ok := p.(PathPrefix); ok {
 				return pp.FullPathPrefixCanon()
-			} else {
-				return getParentPath(p)
 			}
-		} else {
-			return ""
+			return getParentPath(p)
 		}
+
+		return ""
 	}
 
 	if prefix := getParentPath(sr); prefix != "" {

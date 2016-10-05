@@ -8,12 +8,12 @@ import (
 	"golang.org/x/crypto/scrypt"
 )
 
-const DEFAULT_SALTLEN = 24
+const DefaultSaltLen = 24
 
 // cryptiter is used to track the crypto version since the start of sunnified.sec.auth
 // when crypto used is changed, the cryptiter will increment
 const cryptiter uint8 = 1
-const scrypt_keylen = 64
+const scryptKeylen = 64
 
 var ErrSaltGenFailed = errors.New("unable to generate a random salt")
 
@@ -29,7 +29,7 @@ type AuthPasswordConfig struct {
 
 func NewAuthPassword(settings AuthPasswordConfig) *AuthPassword {
 	if settings.Saltlen == 0 {
-		settings.Saltlen = DEFAULT_SALTLEN
+		settings.Saltlen = DefaultSaltLen
 	}
 
 	return &AuthPassword{config: settings}
@@ -45,13 +45,13 @@ func (ap *AuthPassword) CryptPassword(pwd string) (string, error) {
 		return "", ErrSaltGenFailed
 	}
 
-	key, err := scrypt.Key([]byte(pwd), salt, n, r, p, scrypt_keylen)
+	key, err := scrypt.Key([]byte(pwd), salt, n, r, p, scryptKeylen)
 
 	if err != nil {
 		return "", err
 	}
 
-	bslice := make([]byte, 1, ap.config.Saltlen+scrypt_keylen+3)
+	bslice := make([]byte, 1, ap.config.Saltlen+ scryptKeylen +3)
 	bslice[0] = byte(ap.config.Saltlen)
 	bslice = append(bslice, salt...)
 	bslice = append(bslice, byte(cryptiter), byte(ap.config.Strength))

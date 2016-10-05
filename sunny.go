@@ -21,12 +21,12 @@ import (
 	"github.com/zaolab/sunnified/web"
 )
 
-const REQ_TIMEOUT time.Duration = 10 * 60 * 1000 * 1000 * 1000 // 10mins
-const DEFAULT_MAX_FILESIZE int64 = 26214400                    // 25MB
+const ReqTimeout time.Duration = 10 * 60 * 1000 * 1000 * 1000 // 10mins
+const DefaultMaxFileSize int64 = 26214400                     // 25MB
 
 var (
 	mutex   sync.RWMutex
-	servers []*SunnyApp = make([]*SunnyApp, 0, 1)
+	servers = make([]*SunnyApp, 0, 1)
 )
 
 type SunnyResponseWriter struct {
@@ -70,21 +70,21 @@ type SunnyApp struct {
 	id          int
 	MiddleWares []mware.MiddleWare
 	MaxFileSize int64
-	conf        config.ConfigLibrary
+	conf        config.Library
 	runners     int32
 	closed      int32
 	_callback   func()
 	mutex       sync.Mutex
-	ev          *event.EventRouter
-	controllers *controller.ControllerGroup
+	ev          *event.Router
+	controllers *controller.Group
 	ctrlhand    *handler.DynamicHandler
 	resources   map[string]func() interface{}
 	mwareresp   []func(*web.Context)
 }
 
 func (sk *SunnyApp) Run(params map[string]interface{}) {
-	var laddr string = ":80"
-	var timeout time.Duration = REQ_TIMEOUT
+	var laddr = ":80"
+	var timeout = ReqTimeout
 
 	if dev, ok := params["dev"]; ok && dev.(bool) {
 		laddr = "127.0.0.1:8080"
@@ -126,13 +126,13 @@ func (sk *SunnyApp) Run(params map[string]interface{}) {
 	} else {
 		log.Println("Starting SunnyApp on " + laddr)
 
-		if err := newHttpServer(laddr, sk, timeout).ListenAndServe(); err != nil {
+		if err := newHTTPServer(laddr, sk, timeout).ListenAndServe(); err != nil {
 			log.Panicln(err)
 		}
 	}
 }
 
-func (sk *SunnyApp) Id() int {
+func (sk *SunnyApp) ID() int {
 	return sk.id
 }
 
@@ -270,7 +270,7 @@ func (sk *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Reques
 				sk.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": re})
 			} else if e, ok := err.(web.ContextError); ok {
 				sk.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": e})
-				handler.ErrorHtml(w, r, e.Code())
+				handler.ErrorHTML(w, r, e.Code())
 			} else {
 				log.Println(err)
 				sk.triggererror(sunctxt, err)
@@ -356,11 +356,11 @@ func (sk *SunnyApp) ServeRequestedEndPoint(w http.ResponseWriter, r *http.Reques
 
 		if sunctxt.HasError() {
 			sk.triggerevent(sunctxt, "contexterror", map[string]interface{}{"context.error": sunctxt.AppError()})
-			handler.ErrorHtml(w, r, sunctxt.ErrorCode())
+			handler.ErrorHTML(w, r, sunctxt.ErrorCode())
 		} else if sunctxt.IsRedirecting() {
 			sk.triggerevent(sunctxt, "redirect", map[string]interface{}{"redirection": sunctxt.Redirection()})
 		} else if state != -1 && (state < 200 || state >= 300) {
-			handler.ErrorHtml(w, r, state)
+			handler.ErrorHTML(w, r, state)
 		}
 	} else {
 		if err := sunctxt.WaitRequestData(); err != nil {
@@ -421,7 +421,7 @@ func NewSunnyApp() (ss *SunnyApp) {
 	ss = &SunnyApp{
 		Router:      router.NewSunnyRouter(),
 		MiddleWares: make([]mware.MiddleWare, 0, 5),
-		MaxFileSize: DEFAULT_MAX_FILESIZE,
+		MaxFileSize: DefaultMaxFileSize,
 		controllers: controller.NewControllerGroup(),
 		runners:     1,
 		mwareresp:   make([]func(*web.Context), 0, 5),
@@ -446,7 +446,7 @@ func GetSunnyApp(id int) *SunnyApp {
 	return nil
 }
 
-var graceshut int32 = 0
+var graceshut int32
 
 func GracefulShutDown() {
 	if atomic.CompareAndSwapInt32(&graceshut, 0, 1) {
@@ -486,6 +486,6 @@ func removeSunnyApp(id int) {
 	}
 }
 
-func newHttpServer(addr string, handler http.Handler, timeout time.Duration) *http.Server {
+func newHTTPServer(addr string, handler http.Handler, timeout time.Duration) *http.Server {
 	return &http.Server{Addr: addr, Handler: handler, ReadTimeout: timeout}
 }

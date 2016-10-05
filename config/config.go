@@ -16,8 +16,8 @@ var ErrConfigFileInvalid = errors.New("configuration file given is invalid")
 var ErrBranchKeyExists = errors.New("unable to create branch; key already exists")
 var ErrValueIsBranch = errors.New("cannot set a custom value on a branch itself")
 
-type ConfigReader interface {
-	Branch(string) ConfigLibrary
+type Reader interface {
+	Branch(string) Library
 	ToMap() map[string]interface{}
 	Exists(...string) bool
 	Interface(string, ...interface{}) interface{}
@@ -56,21 +56,21 @@ type ConfigReader interface {
 	Uint64Slice(string, ...[]uint64) []uint64
 }
 
-type ConfigWriter interface {
+type Writer interface {
 	Set(string, interface{}) error
-	MakeBranch(string) (ConfigLibrary, error)
+	MakeBranch(string) (Library, error)
 }
 
-type ConfigLibrary interface {
-	ConfigReader
-	ConfigWriter
+type Library interface {
+	Reader
+	Writer
 }
 
 // TODO: change to struct and add in Event
 // trigger event calls whenever Set/MakeBranch is called
 type Configuration map[string]interface{}
 
-type ConfigurationSwitch []ConfigLibrary
+type ConfigurationSwitch []Library
 
 func NewConfigurationFromFile(file string) (ConfigurationSwitch, error) {
 	var (
@@ -125,7 +125,7 @@ func (cs ConfigurationSwitch) Update() {
 func (c Configuration) Set(name string, value interface{}) (err error) {
 	if strings.Contains(name, ".") {
 		splitname := util.StringSplitLastN(name, ".", 2)
-		var cfg ConfigLibrary
+		var cfg Library
 		if cfg, err = c.MakeBranch(splitname[0]); err == nil {
 			preval := cfg.Interface(splitname[1], nil)
 			if preval != nil {
@@ -163,7 +163,7 @@ func (c Configuration) Set(name string, value interface{}) (err error) {
 	return
 }
 
-func (c Configuration) MakeBranch(name string) (cfg ConfigLibrary, err error) {
+func (c Configuration) MakeBranch(name string) (cfg Library, err error) {
 	i := c.Interface(name, nil)
 
 	if i != nil {
@@ -193,7 +193,7 @@ func (c Configuration) MakeBranch(name string) (cfg ConfigLibrary, err error) {
 	return
 }
 
-func (c Configuration) Branch(name string) ConfigLibrary {
+func (c Configuration) Branch(name string) Library {
 	var namesplit []string
 
 	if strings.Contains(name, ".") {
@@ -825,8 +825,8 @@ func (c Configuration) LoadConfigStruct(st interface{}) interface{} {
 	return val.Interface()
 }
 
-func setStructConfig(cfg ConfigLibrary, val reflect.Value, valtype reflect.Type) reflect.Value {
-	var isPtr bool = false
+func setStructConfig(cfg Library, val reflect.Value, valtype reflect.Type) reflect.Value {
+	var isPtr = false
 	var retval reflect.Value
 
 	if valtype.Kind() == reflect.Ptr {
@@ -879,7 +879,7 @@ func setStructConfig(cfg ConfigLibrary, val reflect.Value, valtype reflect.Type)
 
 func (c Configuration) splitBranchKey(key string) (Configuration, string) {
 	var keysplit []string
-	var cfg Configuration = c
+	var cfg = c
 
 	if strings.Contains(key, ".") {
 		keysplit = util.StringSplitLastN(key, ".", 2)

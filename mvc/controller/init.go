@@ -13,59 +13,59 @@ import (
 )
 
 var (
-	type_responsewriter     = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
-	type_request            = reflect.TypeOf((*http.Request)(nil))
-	type_mvc_view           = reflect.TypeOf((*mvc.View)(nil)).Elem()
-	type_mvc_controller     = reflect.TypeOf((*mvc.Controller)(nil)).Elem()
-	type_slicestring        = reflect.TypeOf([]string{})
-	type_mapstringstring    = reflect.TypeOf(map[string]string{})
-	type_mapstringinterface = reflect.TypeOf(map[string]interface{}{})
-	type_vmap               = reflect.TypeOf(mvc.VM{})
-	type_upath              = reflect.TypeOf(web.UPath{})
-	type_pdata              = reflect.TypeOf(web.PData{})
-	type_statuscode         = reflect.TypeOf((web.StatusCode)(0))
-	type_timetime           = reflect.TypeOf((*time.Time)(nil))
-	type_timeduration       = reflect.TypeOf((*time.Duration)(nil))
-	type_webcontext         = reflect.TypeOf((*web.Context)(nil))
+	typeResponseWriter     = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
+	typeRequest            = reflect.TypeOf((*http.Request)(nil))
+	typeMVCView            = reflect.TypeOf((*mvc.View)(nil)).Elem()
+	typeMVCController      = reflect.TypeOf((*mvc.Controller)(nil)).Elem()
+	typeSliceString        = reflect.TypeOf([]string{})
+	typeMapStringString    = reflect.TypeOf(map[string]string{})
+	typeMapStringInterface = reflect.TypeOf(map[string]interface{}{})
+	typeVmap               = reflect.TypeOf(mvc.VM{})
+	typeUpath              = reflect.TypeOf(web.UPath{})
+	typePdata              = reflect.TypeOf(web.PData{})
+	typeStatusCode         = reflect.TypeOf((web.StatusCode)(0))
+	typeTimeTime           = reflect.TypeOf((*time.Time)(nil))
+	typeTimeDuration       = reflect.TypeOf((*time.Duration)(nil))
+	typeWebContext         = reflect.TypeOf((*web.Context)(nil))
 
-	len_argtype_string_suffix   = len(DATATYPE_STRING_SUFFIX)
-	len_argtype_bool_suffix     = len(DATATYPE_BOOL_SUFFIX)
-	len_argtype_int_suffix      = len(DATATYPE_INT_SUFFIX)
-	len_argtype_int64_suffix    = len(DATATYPE_INT64_SUFFIX)
-	len_argtype_float_suffix    = len(DATATYPE_FLOAT_SUFFIX)
-	len_argtype_float64_suffix  = len(DATATYPE_FLOAT64_SUFFIX)
-	len_argtype_email_suffix    = len(DATATYPE_EMAIL_SUFFIX)
-	len_argtype_url_suffix      = len(DATATYPE_URL_SUFFIX)
-	len_argtype_date_suffix     = len(DATATYPE_DATE_SUFFIX)
-	len_argtype_time_suffix     = len(DATATYPE_TIME_SUFFIX)
-	len_argtype_datetime_suffix = len(DATATYPE_DATETIME_SUFFIX)
+	lenArgtypeStringSuffix   = len(DatatypeStringSuffix)
+	lenArgtypeBoolSuffix     = len(DatatypeBoolSuffix)
+	lenArgtypeIntSuffix      = len(DatatypeIntSuffix)
+	lenArgtypeInt64Suffix    = len(DatatypeInt64Suffix)
+	lenArgtypeFloatSuffix    = len(DatatypeFloatSuffix)
+	lenArgtypeFloat64Suffix  = len(DatatypeFloat64Suffix)
+	lenArgtypeEmailSuffix    = len(DatatypeEmailSuffix)
+	lenArgtypeURLSuffix      = len(DatatypeURLSuffix)
+	lenArgtypeDateSuffix     = len(DatatypeDateSuffix)
+	lenArgtypeTimeSuffix     = len(DatatypeTimeSuffix)
+	lenArgtypeDateTimeSuffix = len(DatatypeDateTimeSuffix)
 
-	len_form_valuetype_lprefix = len(FORM_VALUETYPE_LPREFIX)
+	lenFormValueTypeLprefix = len(FormValueTypeLprefix)
 
 	group = NewControllerGroup()
 )
 
-func NewControllerGroup() *ControllerGroup {
-	return &ControllerGroup{
-		details:  make(map[string]map[string]*ControllerMeta),
+func NewControllerGroup() *Group {
+	return &Group{
+		details:  make(map[string]map[string]*Meta),
 		modules:  make(map[string]string),
 		detmutex: sync.RWMutex{},
 		modmutex: sync.RWMutex{},
 	}
 }
 
-func GetDefaultControllerGroup() *ControllerGroup {
+func GetDefaultControllerGroup() *Group {
 	return group
 }
 
-type ControllerGroup struct {
-	details  map[string]map[string]*ControllerMeta
+type Group struct {
+	details  map[string]map[string]*Meta
 	modules  map[string]string
 	detmutex sync.RWMutex
 	modmutex sync.RWMutex
 }
 
-func (cg *ControllerGroup) HasModule(mod string) bool {
+func (cg *Group) HasModule(mod string) bool {
 	cg.detmutex.RLock()
 	defer cg.detmutex.RUnlock()
 
@@ -73,7 +73,7 @@ func (cg *ControllerGroup) HasModule(mod string) bool {
 	return exists
 }
 
-func (cg *ControllerGroup) Module(mod string) (m map[string]*ControllerMeta) {
+func (cg *Group) Module(mod string) (m map[string]*Meta) {
 	cg.detmutex.RLock()
 	defer cg.detmutex.RUnlock()
 
@@ -85,7 +85,7 @@ func (cg *ControllerGroup) Module(mod string) (m map[string]*ControllerMeta) {
 	return
 }
 
-func (cg *ControllerGroup) HasController(mod, con string) (exists bool) {
+func (cg *Group) HasController(mod, con string) (exists bool) {
 	cg.detmutex.RLock()
 	defer cg.detmutex.RUnlock()
 
@@ -97,7 +97,7 @@ func (cg *ControllerGroup) HasController(mod, con string) (exists bool) {
 	return
 }
 
-func (cg *ControllerGroup) Controller(mod, con string) (c *ControllerMeta) {
+func (cg *Group) Controller(mod, con string) (c *Meta) {
 	cg.detmutex.RLock()
 	defer cg.detmutex.RUnlock()
 
@@ -112,26 +112,26 @@ func (cg *ControllerGroup) Controller(mod, con string) (c *ControllerMeta) {
 	return
 }
 
-func (cg *ControllerGroup) AddModule(alias string, modname string) {
+func (cg *Group) AddModule(alias string, modname string) {
 	cg.modmutex.Lock()
 	defer cg.modmutex.Unlock()
 	cg.modules[alias] = modname
 }
 
-func (cg *ControllerGroup) AddController(cinterface interface{}) (string, string) {
+func (cg *Group) AddController(cinterface interface{}) (string, string) {
 	cg.detmutex.Lock()
 	defer cg.detmutex.Unlock()
 
 	cm, controller, alias, modname := MakeControllerMeta(cinterface)
 
 	if cg.details[alias] == nil {
-		cg.details[alias] = make(map[string]*ControllerMeta)
+		cg.details[alias] = make(map[string]*Meta)
 	} else if c, exists := cg.details[alias][controller]; exists {
 		if cm.rtype == c.rtype {
 			return alias, controller
-		} else {
-			panic("Duplicate controller name: " + alias + "." + controller)
 		}
+
+		panic("Duplicate controller name: " + alias + "." + controller)
 	}
 
 	cg.createModAlias(alias, modname)
@@ -139,7 +139,7 @@ func (cg *ControllerGroup) AddController(cinterface interface{}) (string, string
 	return alias, controller
 }
 
-func (cg *ControllerGroup) createModAlias(alias, modname string) {
+func (cg *Group) createModAlias(alias, modname string) {
 	cg.modmutex.Lock()
 	defer cg.modmutex.Unlock()
 
@@ -156,7 +156,7 @@ func HasModule(mod string) bool {
 	return group.HasModule(mod)
 }
 
-func Module(mod string) (m map[string]*ControllerMeta) {
+func Module(mod string) (m map[string]*Meta) {
 	return group.Module(mod)
 }
 
@@ -164,7 +164,7 @@ func HasController(mod, con string) (exists bool) {
 	return group.HasController(mod, con)
 }
 
-func Controller(mod, con string) *ControllerMeta {
+func Controller(mod, con string) *Meta {
 	return group.Controller(mod, con)
 }
 
@@ -176,7 +176,7 @@ func AddController(cinterface interface{}) (string, string) {
 	return group.AddController(cinterface)
 }
 
-func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, mod, modfull string) {
+func MakeControllerMeta(cinterface interface{}) (cm *Meta, ctrlname, mod, modfull string) {
 	var (
 		reqmeth ReqMethod
 		ownname string
@@ -200,7 +200,7 @@ func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, m
 
 	ctrlname, reqmeth = parseReqMethod(ownname)
 
-	cm = &ControllerMeta{
+	cm = &Meta{
 		name:    ownname,
 		modname: mod,
 		rtype:   rawtype,
@@ -210,21 +210,21 @@ func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, m
 
 	switch rtype.Kind() {
 	case reflect.Func:
-		cm.t = CONTYPE_FUNC
+		cm.t = ContypeFunc
 		cm.args = parseArgsMeta(rtype, false)
 
 		var isconstruct bool
 		if cm.ResultStyle, isconstruct = parseResultStyle(rtype, true); isconstruct {
-			cm.t = CONTYPE_CONSTRUCTOR
+			cm.t = ContypeConstructor
 			cm.name = rtype.Name()
 			// TODO: the package might be different,
 			// but we assumes it falls in the same package (ignore it for now)
 		}
 	case reflect.Struct:
-		if rawtype.Implements(type_mvc_controller) {
-			cm.t = CONTYPE_SCONTROLLER
+		if rawtype.Implements(typeMVCController) {
+			cm.t = ContypeScontroller
 		} else {
-			cm.t = CONTYPE_STRUCT
+			cm.t = ContypeStruct
 		}
 
 		cm.fields = parseFieldsMeta(rtype)
@@ -233,11 +233,11 @@ func MakeControllerMeta(cinterface interface{}) (cm *ControllerMeta, ctrlname, m
 	for i, count := 0, rawtype.NumMethod(); i < count; i++ {
 		meth := rawtype.Method(i)
 
-		_, ismvcmethod := type_mvc_controller.MethodByName(meth.Name)
+		_, ismvcmethod := typeMVCController.MethodByName(meth.Name)
 		if ismvcmethod || meth.Name[len(meth.Name)-1] == '_' {
 			continue
 		}
-		_, ismvcmethod = type_webcontext.MethodByName(meth.Name)
+		_, ismvcmethod = typeWebContext.MethodByName(meth.Name)
 		if ismvcmethod {
 			continue
 		}
@@ -272,7 +272,7 @@ func parseResultStyle(rtype reflect.Type, iscontrol bool) (rs ResultStyle, iscon
 		}
 
 		if outkind == reflect.Struct {
-			if out.Implements(type_mvc_view) {
+			if out.Implements(typeMVCView) {
 				rs.view = true
 				// if the function outputs a struct,
 				// we will consider it a constructor function,
@@ -282,15 +282,15 @@ func parseResultStyle(rtype reflect.Type, iscontrol bool) (rs ResultStyle, iscon
 				isconstruct = true
 				rs, _ = parseResultStyle(rtype, false)
 			}
-		} else if out == type_mvc_view {
+		} else if out == typeMVCView {
 			rs.view = true
-		} else if numout == 1 && out == type_statuscode {
+		} else if numout == 1 && out == typeStatusCode {
 			rs.status = true
-		} else if out == type_vmap {
+		} else if out == typeVmap {
 			rs.vmap = true
-		} else if out == type_mapstringinterface {
+		} else if out == typeMapStringInterface {
 			rs.mapsi = true
-		} else if out.Implements(type_mvc_view) {
+		} else if out.Implements(typeMVCView) {
 			rs.view = true
 		}
 
@@ -298,7 +298,7 @@ func parseResultStyle(rtype reflect.Type, iscontrol bool) (rs ResultStyle, iscon
 		if numout == 2 {
 			out := rtype.Out(1)
 
-			if out.Kind() == reflect.Int && out == type_statuscode {
+			if out.Kind() == reflect.Int && out == typeStatusCode {
 				rs.status = true
 			}
 		}
@@ -330,65 +330,65 @@ func parseArgsMeta(rtype reflect.Type, isptr bool) (args []*ArgMeta) {
 		}
 
 		switch {
-		case arg == type_webcontext:
-			argmeta.rtype = type_webcontext
-			argmeta.t = DATATYPE_WEBCONTEXT
-		case arg == type_responsewriter:
-			argmeta.rtype = type_responsewriter
-			argmeta.t = DATATYPE_RESPONSEWRITER
-		case arg == type_request:
-			argmeta.rtype = type_request
-			argmeta.t = DATATYPE_REQUEST
-		case arg == type_upath:
-			argmeta.t = DATATYPE_UPATH
-		case arg == type_slicestring:
-			argmeta.t = DATATYPE_UPATH_SLICE
-		case arg == type_pdata:
-			argmeta.t = DATATYPE_PDATA
-		case arg == type_mapstringstring:
-			argmeta.t = DATATYPE_PDATA_MAP
+		case arg == typeWebContext:
+			argmeta.rtype = typeWebContext
+			argmeta.t = DatatypeWebContext
+		case arg == typeResponseWriter:
+			argmeta.rtype = typeResponseWriter
+			argmeta.t = DatatypeResponseWriter
+		case arg == typeRequest:
+			argmeta.rtype = typeRequest
+			argmeta.t = DatatypeRequest
+		case arg == typeUpath:
+			argmeta.t = DatatypeUpath
+		case arg == typeSliceString:
+			argmeta.t = DatatypeUpathSlice
+		case arg == typePdata:
+			argmeta.t = DatatypePdata
+		case arg == typeMapStringString:
+			argmeta.t = DatatypePdataMap
 		case argkind == reflect.Struct:
 			switch {
-			case strings.HasSuffix(argname, DATATYPE_DATE_SUFFIX):
-				argmeta.t = DATATYPE_DATE
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_date_suffix]
-			case strings.HasSuffix(argname, DATATYPE_TIME_SUFFIX):
-				argmeta.t = DATATYPE_TIME
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_time_suffix]
-			case strings.HasSuffix(argname, DATATYPE_DATETIME_SUFFIX):
-				argmeta.t = DATATYPE_DATETIME
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_datetime_suffix]
+			case strings.HasSuffix(argname, DatatypeDateSuffix):
+				argmeta.t = DatatypeDate
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeDateSuffix]
+			case strings.HasSuffix(argname, DatatypeTimeSuffix):
+				argmeta.t = DatatypeTime
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeTimeSuffix]
+			case strings.HasSuffix(argname, DatatypeDateTimeSuffix):
+				argmeta.t = DatatypeDateTime
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeDateTimeSuffix]
 			default:
-				argmeta.t = DATATYPE_STRUCT
+				argmeta.t = DatatypeStruct
 				argmeta.fields = parseFieldsMeta(arg)
 			}
 		case argkind == reflect.String:
 			switch {
-			case strings.HasSuffix(argname, DATATYPE_STRING_SUFFIX):
-				argmeta.t = DATATYPE_STRING
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_string_suffix]
-			case strings.HasSuffix(argname, DATATYPE_EMAIL_SUFFIX):
-				argmeta.t = DATATYPE_EMAIL
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_email_suffix]
-			case strings.HasSuffix(argname, DATATYPE_URL_SUFFIX):
-				argmeta.t = DATATYPE_URL
-				argmeta.lname = argmeta.lname[:namelen-len_argtype_url_suffix]
+			case strings.HasSuffix(argname, DatatypeStringSuffix):
+				argmeta.t = DatatypeString
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeStringSuffix]
+			case strings.HasSuffix(argname, DatatypeEmailSuffix):
+				argmeta.t = DatatypeEmail
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeEmailSuffix]
+			case strings.HasSuffix(argname, DatatypeURLSuffix):
+				argmeta.t = DatatypeURL
+				argmeta.lname = argmeta.lname[:namelen-lenArgtypeURLSuffix]
 			}
-		case argkind == reflect.Int && strings.HasSuffix(argname, DATATYPE_INT_SUFFIX):
-			argmeta.t = DATATYPE_INT
-			argmeta.lname = argmeta.lname[:namelen-len_argtype_int_suffix]
-		case argkind == reflect.Int64 && strings.HasSuffix(argname, DATATYPE_INT64_SUFFIX):
-			argmeta.t = DATATYPE_INT64
-			argmeta.lname = argmeta.lname[:namelen-len_argtype_int64_suffix]
-		case argkind == reflect.Float32 && strings.HasSuffix(argname, DATATYPE_FLOAT_SUFFIX):
-			argmeta.t = DATATYPE_FLOAT
-			argmeta.lname = argmeta.lname[:namelen-len_argtype_float_suffix]
-		case argkind == reflect.Float64 && strings.HasSuffix(argname, DATATYPE_FLOAT64_SUFFIX):
-			argmeta.t = DATATYPE_FLOAT64
-			argmeta.lname = argmeta.lname[:namelen-len_argtype_float64_suffix]
-		case argkind == reflect.Float64 && strings.HasSuffix(argname, DATATYPE_BOOL_SUFFIX):
-			argmeta.t = DATATYPE_BOOL
-			argmeta.lname = argmeta.lname[:namelen-len_argtype_bool_suffix]
+		case argkind == reflect.Int && strings.HasSuffix(argname, DatatypeIntSuffix):
+			argmeta.t = DatatypeInt
+			argmeta.lname = argmeta.lname[:namelen-lenArgtypeIntSuffix]
+		case argkind == reflect.Int64 && strings.HasSuffix(argname, DatatypeInt64Suffix):
+			argmeta.t = DatatypeInt64
+			argmeta.lname = argmeta.lname[:namelen-lenArgtypeInt64Suffix]
+		case argkind == reflect.Float32 && strings.HasSuffix(argname, DatatypeFloatSuffix):
+			argmeta.t = DatatypeFloat
+			argmeta.lname = argmeta.lname[:namelen-lenArgtypeFloatSuffix]
+		case argkind == reflect.Float64 && strings.HasSuffix(argname, DatatypeFloat64Suffix):
+			argmeta.t = DatatypeFloat64
+			argmeta.lname = argmeta.lname[:namelen-lenArgtypeFloat64Suffix]
+		case argkind == reflect.Float64 && strings.HasSuffix(argname, DatatypeBoolSuffix):
+			argmeta.t = DatatypeBool
+			argmeta.lname = argmeta.lname[:namelen-lenArgtypeBoolSuffix]
 		}
 		args[argi] = argmeta
 		argi++
@@ -411,16 +411,16 @@ func parseFieldsMeta(rtype reflect.Type) (fields []*FieldMeta) {
 
 		// TODO: optimise/refactor this crap
 		lname := strings.ToLower(fname)
-		is_form := strings.HasPrefix(lname, FORM_VALUETYPE_LPREFIX)
-		is_accepted := field.Type == type_webcontext || field.Type == type_responsewriter || field.Type == type_request || field.Anonymous || field.Tag.Get(FORM_VALUETYPE_TAG_NAME) != ""
-		is_parser := field.Tag.Get(STRUCTVALUEFEED_TAG) != "" || field.Tag.Get(STRUCTVALUERES_TAG) != ""
+		isForm := strings.HasPrefix(lname, FormValueTypeLprefix)
+		isAccepted := field.Type == typeWebContext || field.Type == typeResponseWriter || field.Type == typeRequest || field.Anonymous || field.Tag.Get(FormValueTypeTagName) != ""
+		isParser := field.Tag.Get(StructValueFeedTag) != "" || field.Tag.Get(StructValueResTag) != ""
 
 		// only exported fields (where PkgPath == "") can have their values set
 		// and fields which have a prefix of form_ or has a type tag
-		if field.PkgPath != "" || (!is_accepted && !is_form && !is_parser) {
+		if field.PkgPath != "" || (!isAccepted && !isForm && !isParser) {
 			continue
-		} else if is_form {
-			lname = lname[len_form_valuetype_lprefix:]
+		} else if isForm {
+			lname = lname[lenFormValueTypeLprefix:]
 		}
 
 		fmeta := &FieldMeta{
@@ -433,53 +433,53 @@ func parseFieldsMeta(rtype reflect.Type) (fields []*FieldMeta) {
 			anonymous: field.Anonymous,
 		}
 
-		if is_form || is_accepted {
+		if isForm || isAccepted {
 			switch fkind {
 			case reflect.Struct:
 				switch field.Type {
-				case type_webcontext:
-					fmeta.t = DATATYPE_WEBCONTEXT
-				case type_responsewriter:
-					fmeta.t = DATATYPE_RESPONSEWRITER
-				case type_request:
-					fmeta.t = DATATYPE_REQUEST
-				case type_timetime:
-					fmeta.rtype = type_timetime
-					if field.Tag.Get(FORM_VALUETYPE_TAG_NAME) == "date" {
-						fmeta.t = DATATYPE_DATE
+				case typeWebContext:
+					fmeta.t = DatatypeWebContext
+				case typeResponseWriter:
+					fmeta.t = DatatypeResponseWriter
+				case typeRequest:
+					fmeta.t = DatatypeRequest
+				case typeTimeTime:
+					fmeta.rtype = typeTimeTime
+					if field.Tag.Get(FormValueTypeTagName) == "date" {
+						fmeta.t = DatatypeDate
 					} else {
-						fmeta.t = DATATYPE_DATETIME
+						fmeta.t = DatatypeDateTime
 					}
-				case type_timeduration:
-					fmeta.rtype = type_timeduration
-					fmeta.t = DATATYPE_TIME
+				case typeTimeDuration:
+					fmeta.rtype = typeTimeDuration
+					fmeta.t = DatatypeTime
 				default:
 					if field.Anonymous {
-						fmeta.t = DATATYPE_EMBEDDED
+						fmeta.t = DatatypeEmbedded
 					} else {
-						fmeta.t = DATATYPE_STRUCT
+						fmeta.t = DatatypeStruct
 					}
 					fmeta.fields = parseFieldsMeta(field.Type)
 				}
 			case reflect.String:
-				switch field.Tag.Get(FORM_VALUETYPE_TAG_NAME) {
+				switch field.Tag.Get(FormValueTypeTagName) {
 				case "email":
-					fmeta.t = DATATYPE_EMAIL
+					fmeta.t = DatatypeEmail
 				case "url":
-					fmeta.t = DATATYPE_URL
+					fmeta.t = DatatypeURL
 				default:
-					fmeta.t = DATATYPE_STRING
+					fmeta.t = DatatypeString
 				}
 			case reflect.Int:
-				fmeta.t = DATATYPE_INT
+				fmeta.t = DatatypeInt
 			case reflect.Int64:
-				fmeta.t = DATATYPE_INT64
+				fmeta.t = DatatypeInt64
 			case reflect.Float32:
-				fmeta.t = DATATYPE_FLOAT
+				fmeta.t = DatatypeFloat
 			case reflect.Float64:
-				fmeta.t = DATATYPE_FLOAT64
+				fmeta.t = DatatypeFloat64
 			case reflect.Bool:
-				fmeta.t = DATATYPE_BOOL
+				fmeta.t = DatatypeBool
 			}
 		}
 
@@ -496,20 +496,20 @@ func parseFieldsMeta(rtype reflect.Type) (fields []*FieldMeta) {
 
 func parseReqMethod(name string) (alias string, reqmeth ReqMethod) {
 	alias = strings.ToLower(name)
-	reqmeth = REQMETHOD_COMMON
+	reqmeth = ReqMethodCommon
 
 	switch {
 	case strings.HasPrefix(name, "GET"):
-		reqmeth = REQMETHOD_GET
+		reqmeth = ReqMethodGet
 		alias = alias[3:]
 	case strings.HasPrefix(name, "POST"):
-		reqmeth = REQMETHOD_POST
+		reqmeth = ReqMethodPost
 		alias = alias[4:]
 	case strings.HasPrefix(name, "PUT"):
-		reqmeth = REQMETHOD_PUT
+		reqmeth = ReqMethodPut
 		alias = alias[3:]
 	case strings.HasPrefix(name, "DELETE"):
-		reqmeth = REQMETHOD_DELETE
+		reqmeth = ReqMethodDelete
 		alias = alias[6:]
 	}
 

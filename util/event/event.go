@@ -7,7 +7,7 @@ type Event struct {
 	info      map[string]interface{}
 }
 
-func (e *Event) Id() string {
+func (e *Event) ID() string {
 	return e.namespace + "." + e.name
 }
 

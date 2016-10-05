@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	DEFAULT_WINDOW_SIZE      = 100
-	DEFAULT_TIME_WINDOW_SIZE = 2
-	DEFAULT_INTERVAL         = 30
-	DEFAULT_DIGITS           = 6
+	DefWindowSize     = 100
+	DefTimeWindowSize = 2
+	DefInterval       = 30
+	DefDigits         = 6
 )
 
 var (
@@ -135,7 +135,7 @@ func (ho *HOTP) SetDigits(d int) error {
 
 func (ho *HOTP) Digits() int {
 	if ho.digits == 0 {
-		return DEFAULT_DIGITS
+		return DefDigits
 	}
 	return ho.digits
 }
@@ -317,8 +317,8 @@ func NewHOTP(secret string) *HOTP {
 			hname:  "SHA1",
 			c:      make([]byte, 8),
 			secret: secret,
-			window: DEFAULT_WINDOW_SIZE,
-			digits: DEFAULT_DIGITS,
+			window: DefWindowSize,
+			digits: DefDigits,
 		}
 	}
 
@@ -344,10 +344,10 @@ func NewTOTP(secret string) *TOTP {
 				hname:  "SHA1",
 				c:      make([]byte, 8),
 				secret: secret,
-				window: DEFAULT_TIME_WINDOW_SIZE,
-				digits: DEFAULT_DIGITS,
+				window: DefTimeWindowSize,
+				digits: DefDigits,
 			},
-			interval: DEFAULT_INTERVAL,
+			interval: DefInterval,
 		}
 	}
 

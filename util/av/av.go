@@ -7,22 +7,22 @@ import (
 
 var ErrInvalidFileName = errors.New("Invalid filename")
 
-type AVScanner interface {
-	ScanFile(string) (AVResult, error)
-	ScanBytes([]byte) (AVResult, error)
-	ScanStream(io.Reader) (AVResult, error)
-	ScanFileAsync(string) <-chan AVResultErr
-	ScanBytesAsync([]byte) <-chan AVResultErr
-	ScanStreamAsync(io.Reader) <-chan AVResultErr
+type Scanner interface {
+	ScanFile(string) (Result, error)
+	ScanBytes([]byte) (Result, error)
+	ScanStream(io.Reader) (Result, error)
+	ScanFileAsync(string) <-chan ResultErr
+	ScanBytesAsync([]byte) <-chan ResultErr
+	ScanStreamAsync(io.Reader) <-chan ResultErr
 }
 
-type AVResult struct {
+type Result struct {
 	FileName string
 	Status   bool
 	Virus    string
 }
 
-type AVResultErr struct {
-	AVResult
+type ResultErr struct {
+	Result
 	Error error
 }

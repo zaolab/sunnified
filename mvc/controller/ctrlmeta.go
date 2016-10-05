@@ -7,19 +7,19 @@ import (
 	"github.com/zaolab/sunnified/web"
 )
 
-type ControllerType int
+type Type int
 
 const (
-	_ ControllerType = iota
-	CONTYPE_FUNC
-	CONTYPE_STRUCT
-	CONTYPE_CONSTRUCTOR
-	CONTYPE_SCONTROLLER
+	_ Type = iota
+	ContypeFunc
+	ContypeStruct
+	ContypeConstructor
+	ContypeScontroller
 )
 
 const (
-	SCON_CONSTRUCT_NAME = "Construct_"
-	SCON_DESTRUCT_NAME  = "Destruct_"
+	SconConstructName = "Construct_"
+	SconDestructName  = "Destruct_"
 )
 
 type ReqMethod uint16
@@ -27,34 +27,34 @@ type ReqMethod uint16
 const (
 	// the first four must be get, post, put and delete (the order is less impt)
 	// since ActionMap.Add() depends on it to work correctly
-	REQMETHOD_GET ReqMethod = 1 << iota
-	REQMETHOD_POST
-	REQMETHOD_PUT
-	REQMETHOD_DELETE
-	REQMETHOD_PATCH
-	REQMETHOD_OPTIONS
-	REQMETHOD_HEAD
+	ReqMethodGet ReqMethod = 1 << iota
+	ReqMethodPost
+	ReqMethodPut
+	ReqMethodDelete
+	ReqMethodPatch
+	ReqMethodOptions
+	ReqMethodHead
 
-	REQMETHOD_COMMON ReqMethod = 15  //1 | 2 | 4 | 8
-	REQMETHOD_ALL    ReqMethod = 127 //1 | 2 | 4 | 8 | 16 | 32 | 64
+	ReqMethodCommon ReqMethod = 15  //1 | 2 | 4 | 8
+	ReqMethodAll    ReqMethod = 127 //1 | 2 | 4 | 8 | 16 | 32 | 64
 )
 
 func GetReqMethod(r *http.Request) ReqMethod {
 	switch r.Method {
 	case "GET":
-		return REQMETHOD_GET
+		return ReqMethodGet
 	case "POST":
-		return REQMETHOD_POST
+		return ReqMethodPost
 	case "PUT":
-		return REQMETHOD_PUT
+		return ReqMethodPut
 	case "DELETE":
-		return REQMETHOD_DELETE
+		return ReqMethodDelete
 	case "PATCH":
-		return REQMETHOD_PATCH
+		return ReqMethodPatch
 	case "OPTIONS":
-		return REQMETHOD_OPTIONS
+		return ReqMethodOptions
 	case "HEAD":
-		return REQMETHOD_HEAD
+		return ReqMethodHead
 	}
 
 	return ReqMethod(0)
@@ -65,20 +65,20 @@ func GetXReqMethod(ctxt *web.Context) ReqMethod {
 
 	switch xreq {
 	case "POST":
-		return REQMETHOD_POST
+		return ReqMethodPost
 	case "PUT":
-		return REQMETHOD_PUT
+		return ReqMethodPut
 	case "DELETE":
-		return REQMETHOD_DELETE
+		return ReqMethodDelete
 	default:
 	}
 
-	return REQMETHOD_GET
+	return ReqMethodGet
 }
 
 type ActionMap map[string]map[ReqMethod]*ActionMeta
 
-type ControllerMeta struct {
+type Meta struct {
 	name    string
 	modname string
 	rtype   reflect.Type
@@ -86,7 +86,7 @@ type ControllerMeta struct {
 	reqmeth ReqMethod
 	args    []*ArgMeta
 	fields  []*FieldMeta
-	t       ControllerType
+	t       Type
 	ResultStyle
 }
 
@@ -118,7 +118,7 @@ func (a ActionMap) Get(name string, reqtype ReqMethod) *ActionMeta {
 
 func (a ActionMap) GetReqMeth(name string) (rm ReqMethod) {
 	if actions, exists := a[name]; exists {
-		for rmeth, _ := range actions {
+		for rmeth := range actions {
 			rm = rm | rmeth
 		}
 	}
@@ -129,21 +129,21 @@ func (a ActionMap) GetReqMethList(name string) (rml []string) {
 	if actions, exists := a[name]; exists {
 		rml = make([]string, 0, len(actions))
 
-		for rmeth, _ := range actions {
+		for rmeth := range actions {
 			switch rmeth {
-			case REQMETHOD_GET:
+			case ReqMethodGet:
 				rml = append(rml, "GET")
-			case REQMETHOD_POST:
+			case ReqMethodPost:
 				rml = append(rml, "POST")
-			case REQMETHOD_PUT:
+			case ReqMethodPut:
 				rml = append(rml, "PUT")
-			case REQMETHOD_DELETE:
+			case ReqMethodDelete:
 				rml = append(rml, "DELETE")
-			case REQMETHOD_PATCH:
+			case ReqMethodPatch:
 				rml = append(rml, "PATCH")
-			case REQMETHOD_HEAD:
+			case ReqMethodHead:
 				rml = append(rml, "HEAD")
-			case REQMETHOD_OPTIONS:
+			case ReqMethodOptions:
 				rml = append(rml, "OPTIONS")
 			}
 		}
@@ -168,47 +168,47 @@ func (a ActionMap) Count() int {
 	return len(a)
 }
 
-func (cm *ControllerMeta) Action(name string, reqtype ReqMethod) *ActionMeta {
+func (cm *Meta) Action(name string, reqtype ReqMethod) *ActionMeta {
 	return cm.meths.Get(name, reqtype)
 }
 
-func (cm ControllerMeta) ActionFromRequest(name string, ctxt *web.Context) *ActionMeta {
+func (cm Meta) ActionFromRequest(name string, ctxt *web.Context) *ActionMeta {
 	return cm.Action(name, GetXReqMethod(ctxt))
 }
 
-func (cm ControllerMeta) ActionAvailableMethods(name string) ReqMethod {
+func (cm Meta) ActionAvailableMethods(name string) ReqMethod {
 	return cm.meths.GetReqMeth(name)
 }
 
-func (cm ControllerMeta) ActionAvailableMethodsList(name string) []string {
+func (cm Meta) ActionAvailableMethodsList(name string) []string {
 	return cm.meths.GetReqMethList(name)
 }
 
-func (cm *ControllerMeta) New() reflect.Value {
+func (cm *Meta) New() reflect.Value {
 	return reflect.New(cm.rtype)
 }
 
-func (cm *ControllerMeta) HasActionMethod(name string, reqtype ReqMethod) bool {
+func (cm *Meta) HasActionMethod(name string, reqtype ReqMethod) bool {
 	return cm.Action(name, reqtype) != nil
 }
 
-func (cm *ControllerMeta) HasAction(name string) bool {
+func (cm *Meta) HasAction(name string) bool {
 	return cm.meths.HasAction(name)
 }
 
-func (cm *ControllerMeta) Name() string {
+func (cm *Meta) Name() string {
 	return cm.name
 }
 
-func (cm *ControllerMeta) Module() string {
+func (cm *Meta) Module() string {
 	return cm.modname
 }
 
-func (cm *ControllerMeta) RType() reflect.Type {
+func (cm *Meta) RType() reflect.Type {
 	return cm.rtype
 }
 
-func (cm *ControllerMeta) Meths() ActionMap {
+func (cm *Meta) Meths() ActionMap {
 	meths := make(ActionMap)
 	for k, v := range cm.meths {
 		reqmeths := make(map[ReqMethod]*ActionMeta)
@@ -220,22 +220,22 @@ func (cm *ControllerMeta) Meths() ActionMap {
 	return meths
 }
 
-func (cm *ControllerMeta) ReqMeth() ReqMethod {
+func (cm *Meta) ReqMeth() ReqMethod {
 	return cm.reqmeth
 }
 
-func (cm *ControllerMeta) Args() []*ArgMeta {
+func (cm *Meta) Args() []*ArgMeta {
 	out := make([]*ArgMeta, len(cm.args))
 	copy(out, cm.args)
 	return out
 }
 
-func (cm *ControllerMeta) Fields() []*FieldMeta {
+func (cm *Meta) Fields() []*FieldMeta {
 	out := make([]*FieldMeta, len(cm.fields))
 	copy(out, cm.fields)
 	return out
 }
 
-func (cm *ControllerMeta) T() ControllerType {
+func (cm *Meta) T() Type {
 	return cm.t
 }

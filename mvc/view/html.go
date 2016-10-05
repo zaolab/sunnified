@@ -12,20 +12,20 @@ import (
 	"github.com/zaolab/sunnified/web"
 )
 
-type HtmlView struct {
+type HTMLView struct {
 	mvc.VM
 	GetTmpl func(fmap template.FuncMap) (t *template.Template, err error)
 	fmap    template.FuncMap
 }
 
-func (hv *HtmlView) SetViewFunc(name string, f interface{}) {
+func (hv *HTMLView) SetViewFunc(name string, f interface{}) {
 	if hv.fmap == nil {
 		hv.fmap = template.FuncMap{}
 	}
 	hv.fmap[name] = f
 }
 
-func (hv *HtmlView) SetViewFuncName(name string) {
+func (hv *HTMLView) SetViewFuncName(name string) {
 	if hv.fmap == nil {
 		hv.fmap = template.FuncMap{}
 	}
@@ -35,11 +35,11 @@ func (hv *HtmlView) SetViewFuncName(name string) {
 	}
 }
 
-func (hv *HtmlView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
+func (hv *HTMLView) SetGetTmpl(f func(fmap template.FuncMap) (t *template.Template, err error)) {
 	hv.GetTmpl = f
 }
 
-func (hv *HtmlView) SetVMap(vmap ...mvc.VM) {
+func (hv *HTMLView) SetVMap(vmap ...mvc.VM) {
 	if hv.VM == nil {
 		hv.VM = mvc.VM{}
 	}
@@ -50,28 +50,28 @@ func (hv *HtmlView) SetVMap(vmap ...mvc.VM) {
 	}
 }
 
-func (hv *HtmlView) SetData(name string, value interface{}) {
+func (hv *HTMLView) SetData(name string, value interface{}) {
 	if hv.VM == nil {
 		hv.VM = mvc.VM{}
 	}
 	hv.VM[name] = value
 }
 
-func (hv *HtmlView) ContentType(ctxt *web.Context) string {
+func (hv *HTMLView) ContentType(ctxt *web.Context) string {
 	return "text/html; charset=utf-8"
 }
 
-func (hv *HtmlView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, err error) {
+func (hv *HTMLView) getTmpl(names mvc.Meta) (tmpl *template.Template, err error) {
 	if hv.GetTmpl != nil {
 		tmpl, err = hv.GetTmpl(hv.fmap)
 	} else {
-		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ".html"), hv.fmap)
+		tmpl, err = mvc.GetHTMLTmpl(mvc.GetTemplateRelPath(names, ".html"), hv.fmap)
 	}
 
 	return
 }
 
-func (hv *HtmlView) Render(ctxt *web.Context) (b []byte, err error) {
+func (hv *HTMLView) Render(ctxt *web.Context) (b []byte, err error) {
 	if tmpl, err := hv.getTmpl(mvc.GetMvcMeta(ctxt)); err == nil {
 		buf := &bytes.Buffer{}
 		tmpl.Execute(buf, hv.VM)
@@ -81,7 +81,7 @@ func (hv *HtmlView) Render(ctxt *web.Context) (b []byte, err error) {
 	return
 }
 
-func (hv *HtmlView) RenderString(ctxt *web.Context) (s string, err error) {
+func (hv *HTMLView) RenderString(ctxt *web.Context) (s string, err error) {
 	var b []byte
 	b, err = hv.Render(ctxt)
 	if err == nil {
@@ -90,10 +90,10 @@ func (hv *HtmlView) RenderString(ctxt *web.Context) (s string, err error) {
 	return
 }
 
-func (hv *HtmlView) Publish(ctxt *web.Context) (err error) {
+func (hv *HTMLView) Publish(ctxt *web.Context) (err error) {
 	names := mvc.GetMvcMeta(ctxt)
-	if names[mvc.MVC_ACTION] == "" {
-		names[mvc.MVC_ACTION] = "_"
+	if names[mvc.MVCAction] == "" {
+		names[mvc.MVCAction] = "_"
 	}
 
 	var tmpl *template.Template

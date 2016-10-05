@@ -54,7 +54,7 @@ type Context struct {
 	Controller  string
 	Action      string
 	Ext         string
-	Event       *event.EventRouter
+	Event       *event.Router
 	Session     SessionManager
 	Cache       CacheManager
 	MaxFileSize int64
@@ -99,12 +99,12 @@ func (c *Context) parseRequestData(ctype string, body io.ReadCloser) {
 
 	if parser := GetContentParser(ctype); parser != nil {
 		c.rdata = parser(body)
-		requestDataToUrlValues(c.Request, c.rdata)
+		requestDataToURLValues(c.Request, c.rdata)
 	} else if ctype == "application/json" {
 		d := json.NewDecoder(body)
 		d.UseNumber()
 		d.Decode(&c.rdata)
-		requestDataToUrlValues(c.Request, c.rdata)
+		requestDataToURLValues(c.Request, c.rdata)
 	} else {
 		// 2MB in memory
 		// passing back of ErrNotMultipart is only >= golang1.3
@@ -258,7 +258,7 @@ func (c *Context) StartTime() time.Time {
 	return c.time
 }
 
-func (c *Context) SunnyServerId() int {
+func (c *Context) SunnyServerID() int {
 	// to prevent mistaking of sunny server when Context created without
 	// using NewContext
 	if c.issunny {
@@ -297,7 +297,7 @@ func (c *Context) IsAjax() bool {
 }
 
 func (c *Context) IsAJAX() bool {
-	return strings.ToLower(c.Request.Header.Get(HTTP_X_REQUESTED_WITH)) == "xmlhttprequest"
+	return strings.ToLower(c.Request.Header.Get(HTTPXRequestedWith)) == "xmlhttprequest"
 }
 
 func (c *Context) IsAjaxOrCors() bool {
@@ -330,7 +330,7 @@ func (c *Context) RemoteAddress() net.IP {
 }
 
 func (c *Context) FwdedForOrRmteAddr() (ip net.IP) {
-	if ipstr := c.Request.Header.Get(HTTP_X_FORWARDED_FOR); ipstr != "" {
+	if ipstr := c.Request.Header.Get(HTTPXForwardedFor); ipstr != "" {
 		if cindex := strings.Index(ipstr, ","); cindex != -1 {
 			ip = net.ParseIP(ipstr[0:cindex])
 		} else {
@@ -345,7 +345,7 @@ func (c *Context) FwdedForOrRmteAddr() (ip net.IP) {
 }
 
 func (c *Context) XRealIPOrRmteAddr() (ip net.IP) {
-	if ipstr := c.Request.Header.Get(HTTP_X_REAL_IP); ipstr != "" {
+	if ipstr := c.Request.Header.Get(HTTPXRealIP); ipstr != "" {
 		ip = net.ParseIP(ipstr)
 	}
 
@@ -407,10 +407,10 @@ func (c *Context) XMethod() string {
 	xmeth := c.Request.Method
 
 	if xmeth == "POST" {
-		tmpxmeth := c.Request.Header.Get(REQMETHOD_X_METHOD_NAME)
+		tmpxmeth := c.Request.Header.Get(ReqmethodXMethodName)
 
 		if tmpxmeth == "" {
-			tmpxmeth = strings.ToUpper(c.PostValue(REQMETHOD_X_METHOD_NAME))
+			tmpxmeth = strings.ToUpper(c.PostValue(ReqmethodXMethodName))
 		}
 
 		if validate.IsIn(tmpxmeth, "GET", "POST", "PUT", "PATCH", "DELETE") {
@@ -474,9 +474,9 @@ func (c *Context) AddFlash(msg string) {
 func (c *Context) HasFlash() bool {
 	if c.Session != nil {
 		return c.Session.HasFlash()
-	} else {
-		return c.flashcache != nil && c.flashcache.HasQueue()
 	}
+
+	return c.flashcache != nil && c.flashcache.HasQueue()
 }
 
 func (c *Context) Flash() string {
@@ -791,7 +791,7 @@ func makeRequestData(k string, c map[string]interface{}, f url.Values) {
 					f.Add(key, strconv.FormatBool(s))
 				case map[string]interface{}:
 					if key != "" {
-						key = fmt.Sprintln("%s.%d", key, i)
+						key = fmt.Sprintf("%s.%d", key, i)
 					}
 					makeRequestData(key, s, f)
 				}
@@ -808,7 +808,7 @@ func makeRequestData(k string, c map[string]interface{}, f url.Values) {
 	}
 }
 
-func requestDataToUrlValues(r *http.Request, data map[string]interface{}) (err error) {
+func requestDataToURLValues(r *http.Request, data map[string]interface{}) (err error) {
 	var (
 		form        = make(url.Values)
 		postform    = make(url.Values)

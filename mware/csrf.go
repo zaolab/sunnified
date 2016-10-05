@@ -13,11 +13,11 @@ import (
 	"github.com/zaolab/sunnified/web"
 )
 
-const d_securityKey = "\x98\x1e\x08\xcc\x38\x87\xbc\xe0\x48\x2f\xac\x76\x99\xc4\x9e\xbd\x72\x12\xf5\x55\xe7\x1f\x43\x74\x06\x9d\x1b\xf0\x93\x4e\xc5\x54"
-const d_csrfToken = "\xc7\xeb\x58\x79\xa7\xf2\x15\x54\x06\x34\x24\x52\x50\x33\x0f\x4b\x95\x36\xb0\xb7\xdb\x5d\xa7\x07\xcf\xa5\x1c\xa5\x10\xe7\xd4\x45"
+const dSecurityKey = "\x98\x1e\x08\xcc\x38\x87\xbc\xe0\x48\x2f\xac\x76\x99\xc4\x9e\xbd\x72\x12\xf5\x55\xe7\x1f\x43\x74\x06\x9d\x1b\xf0\x93\x4e\xc5\x54"
+const dCSRFToken = "\xc7\xeb\x58\x79\xa7\xf2\x15\x54\x06\x34\x24\x52\x50\x33\x0f\x4b\x95\x36\xb0\xb7\xdb\x5d\xa7\x07\xcf\xa5\x1c\xa5\x10\xe7\xd4\x45"
 
-var csrfgate = sec.NewCSRFGate(sec.CSRFGateConfig{Key: []byte(d_securityKey), Token: []byte(d_csrfToken)})
-var type_csrfveri = reflect.TypeOf((CsrfCheck(false)))
+var csrfgate = sec.NewCSRFGate(sec.CSRFGateConfig{Key: []byte(dSecurityKey), Token: []byte(dCSRFToken)})
+var typeCSRFVeri = reflect.TypeOf((CSRFCheck(false)))
 
 func init() {
 	mvc.AddFuncName("URLWToken")
@@ -26,39 +26,39 @@ func init() {
 	mvc.AddFuncName("csrftoken_formtoken")
 }
 
-type CsrfCheck bool
+type CSRFCheck bool
 
-type CsrfMiddleWare struct {
+type CSRFMiddleWare struct {
 	BaseMiddleWare
 }
 
-func NewCsrfMiddleWare() CsrfMiddleWare {
-	return CsrfMiddleWare{}
+func NewCSRFMiddleWare() CSRFMiddleWare {
+	return CSRFMiddleWare{}
 }
 
-func CsrfMiddleWareConstructor() MiddleWare {
-	return NewCsrfMiddleWare()
+func CSRFMiddleWareConstructor() MiddleWare {
+	return NewCSRFMiddleWare()
 }
 
-type CsrfTokenGetter struct {
+type CSRFTokenGetter struct {
 	context *web.Context
-	token   sec.CsrfRequestBody
+	token   sec.CSRFRequestBody
 }
 
-func (cc *CsrfCheck) Verify(r *http.Request) (valid bool) {
+func (cc *CSRFCheck) Verify(r *http.Request) (valid bool) {
 	valid = csrfgate.VerifyCSRFToken(r)
-	*cc = CsrfCheck(valid)
+	*cc = CSRFCheck(valid)
 	return
 }
 
-func (mw CsrfMiddleWare) Controller(ctxt *web.Context, _ *controller.ControlManager) {
+func (mw CSRFMiddleWare) Controller(ctxt *web.Context, _ *controller.ControlManager) {
 	token := csrfgate.CSRFToken(ctxt.Response, ctxt.Request)
-	csrftoken := CsrfTokenGetter{context: ctxt, token: token}
+	csrftoken := CSRFTokenGetter{context: ctxt, token: token}
 	ctxt.SetResource("csrftoken", csrftoken)
 }
 
-func (mw CsrfMiddleWare) View(ctxt *web.Context, vw mvc.View) {
-	var csrftoken CsrfTokenGetter
+func (mw CSRFMiddleWare) View(ctxt *web.Context, vw mvc.View) {
+	var csrftoken CSRFTokenGetter
 
 	if ctxt.MapResourceValue("csrftoken", &csrftoken) == nil && csrftoken.context != nil {
 		if dview, ok := vw.(mvc.DataView); ok {
@@ -75,12 +75,12 @@ func (mw CsrfMiddleWare) View(ctxt *web.Context, vw mvc.View) {
 	}
 }
 
-func (mw CsrfTokenGetter) FeedStructValue(ctxt *web.Context,
+func (ct CSRFTokenGetter) FeedStructValue(ctxt *web.Context,
 	field *controller.FieldMeta,
 	value reflect.Value) (reflect.Value, error) {
 
-	if field.RType() == type_csrfveri {
-		var veri CsrfCheck = false
+	if field.RType() == typeCSRFVeri {
+		var veri CSRFCheck = false
 		veri.Verify(ctxt.Request)
 		value = reflect.ValueOf(veri)
 	}
@@ -88,32 +88,32 @@ func (mw CsrfTokenGetter) FeedStructValue(ctxt *web.Context,
 	return value, nil
 }
 
-func (ct CsrfTokenGetter) Verify() bool {
+func (ct CSRFTokenGetter) Verify() bool {
 	return csrfgate.VerifyCSRFToken(ct.context.Request)
 }
 
-func (ct CsrfTokenGetter) Value() string {
+func (ct CSRFTokenGetter) Value() string {
 	return ct.token.Value
 }
 
-func (ct CsrfTokenGetter) Name() string {
+func (ct CSRFTokenGetter) Name() string {
 	return ct.token.Name
 }
 
-func (ct CsrfTokenGetter) Cookie() *http.Cookie {
+func (ct CSRFTokenGetter) Cookie() *http.Cookie {
 	return ct.token.Cookie
 }
 
-func (ct CsrfTokenGetter) Ok() bool {
+func (ct CSRFTokenGetter) Ok() bool {
 	return ct.token.Ok
 }
 
-func (ct CsrfTokenGetter) FormToken() template.HTML {
+func (ct CSRFTokenGetter) FormToken() template.HTML {
 	return template.HTML(fmt.Sprintf(`<input type="hidden" name="%s" value="%s">`,
 		html.EscapeString(ct.token.Name), html.EscapeString(ct.token.Value)))
 }
 
-func (ct CsrfTokenGetter) URLWToken(path string, qstr ...web.Q) string {
+func (ct CSRFTokenGetter) URLWToken(path string, qstr ...web.Q) string {
 	if qstr != nil && len(qstr) > 0 {
 		qstr[0][ct.token.Name] = ct.token.Value
 	} else {

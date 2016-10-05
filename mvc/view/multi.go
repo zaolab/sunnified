@@ -61,11 +61,11 @@ func (mv *MultiView) ContentType(ctxt *web.Context) string {
 	return "text/html; charset=utf-8"
 }
 
-func (mv *MultiView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
+func (mv *MultiView) getTmpl(names mvc.Meta) (tmpl *template.Template, ext string, err error) {
 	if mv.GetTmpl != nil {
 		tmpl, err = mv.GetTmpl(mv.fmap)
 	} else {
-		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), mv.fmap)
+		tmpl, err = mvc.GetHTMLTmpl(mvc.GetTemplateRelPath(names, ext), mv.fmap)
 	}
 
 	return
@@ -92,8 +92,8 @@ func (mv *MultiView) RenderString(ctxt *web.Context) (s string, err error) {
 
 func (mv *MultiView) Publish(ctxt *web.Context) (err error) {
 	names := mvc.GetMvcMeta(ctxt)
-	if names[mvc.MVC_ACTION] == "" {
-		names[mvc.MVC_ACTION] = "_"
+	if names[mvc.MVCAction] == "" {
+		names[mvc.MVCAction] = "_"
 	}
 
 	var tmpl *template.Template

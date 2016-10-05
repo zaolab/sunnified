@@ -42,7 +42,7 @@ type methMeta struct {
 }
 
 type WebSocketHandler struct {
-	ctrl     *controller.ControllerMeta
+	ctrl     *controller.Meta
 	allowcmd bool
 }
 
@@ -51,7 +51,7 @@ func (wh *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wh *WebSocketHandler) ServeContextHTTP(context *web.Context) {
-	var ctrlmgr *controller.ControlManager = controller.NewControlManager(context, wh.ctrl, "_")
+	var ctrlmgr = controller.NewControlManager(context, wh.ctrl, "_")
 
 	if err := context.ToWebSocket(nil, nil); err != nil {
 		context.RaiseAppError("Unable to upgrade to websocket: " + err.Error())

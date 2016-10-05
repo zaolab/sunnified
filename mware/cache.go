@@ -4,9 +4,9 @@ import "github.com/zaolab/sunnified/web"
 
 const (
 	_ = iota
-	CACHE_PROFILE_NOCACHE
-	CACHE_PROFILE_NOSTORE
-	CACHE_PROFILE_PUBLIC
+	CacheProfileNoCache
+	CacheProfileNoStore
+	CacheProfilePublic
 )
 
 func NewCacheMiddleWare(profile int) CacheMiddleWare {
@@ -16,15 +16,15 @@ func NewCacheMiddleWare(profile int) CacheMiddleWare {
 }
 
 func CacheNoCacheMiddleWareConstructor() MiddleWare {
-	return NewCacheMiddleWare(CACHE_PROFILE_NOCACHE)
+	return NewCacheMiddleWare(CacheProfileNoCache)
 }
 
 func CacheNoStoreMiddleWareConstructor() MiddleWare {
-	return NewCacheMiddleWare(CACHE_PROFILE_NOSTORE)
+	return NewCacheMiddleWare(CacheProfileNoStore)
 }
 
 func CachePublicMiddleWareConstructor() MiddleWare {
-	return NewCacheMiddleWare(CACHE_PROFILE_PUBLIC)
+	return NewCacheMiddleWare(CacheProfilePublic)
 }
 
 type CacheMiddleWare struct {
@@ -34,11 +34,11 @@ type CacheMiddleWare struct {
 
 func (mw CacheMiddleWare) Request(ctxt *web.Context) {
 	switch mw.profile {
-	case CACHE_PROFILE_NOCACHE:
+	case CacheProfileNoCache:
 		ctxt.PrivateNoCache()
-	case CACHE_PROFILE_NOSTORE:
+	case CacheProfileNoStore:
 		ctxt.PrivateNoStore()
-	case CACHE_PROFILE_PUBLIC:
+	case CacheProfilePublic:
 		ctxt.PublicCache(0)
 	}
 }

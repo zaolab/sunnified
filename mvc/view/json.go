@@ -9,13 +9,13 @@ import (
 	"github.com/zaolab/sunnified/web"
 )
 
-type JsonView mvc.VM
+type JSONView mvc.VM
 
-func (jv JsonView) ContentType(ctxt *web.Context) string {
+func (jv JSONView) ContentType(ctxt *web.Context) string {
 	return "application/json; charset=utf-8"
 }
 
-func (jv JsonView) Render(ctxt *web.Context) ([]byte, error) {
+func (jv JSONView) Render(ctxt *web.Context) ([]byte, error) {
 	if jv == nil || len(jv) == 0 {
 		return []byte{'{', '}'}, nil
 	}
@@ -28,7 +28,7 @@ func (jv JsonView) Render(ctxt *web.Context) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (jv JsonView) RenderString(ctxt *web.Context) (string, error) {
+func (jv JSONView) RenderString(ctxt *web.Context) (string, error) {
 	b, err := jv.Render(ctxt)
 	if err == nil {
 		return string(b), nil
@@ -36,7 +36,7 @@ func (jv JsonView) RenderString(ctxt *web.Context) (string, error) {
 	return "", err
 }
 
-func (jv JsonView) Publish(ctxt *web.Context) error {
+func (jv JSONView) Publish(ctxt *web.Context) error {
 	ctxt.SetHeader("Content-Type", "application/json; charset=utf-8")
 
 	if jv == nil || len(jv) == 0 {
@@ -51,7 +51,7 @@ func (jv JsonView) Publish(ctxt *web.Context) error {
 	return nil
 }
 
-func (jv JsonView) getEncodingInterface() (i interface{}) {
+func (jv JSONView) getEncodingInterface() (i interface{}) {
 	i = jv
 
 	if len(jv) == 1 && jv[""] != nil {
@@ -66,27 +66,27 @@ func (jv JsonView) getEncodingInterface() (i interface{}) {
 	return
 }
 
-type FullJsonView JsonView
+type FullJSONView JSONView
 
-func (jv FullJsonView) ContentType(ctxt *web.Context) string {
-	return JsonView(jv).ContentType(ctxt)
+func (jv FullJSONView) ContentType(ctxt *web.Context) string {
+	return JSONView(jv).ContentType(ctxt)
 }
 
-func (jv FullJsonView) Render(ctxt *web.Context) ([]byte, error) {
-	return JsonView(jv).Render(ctxt)
+func (jv FullJSONView) Render(ctxt *web.Context) ([]byte, error) {
+	return JSONView(jv).Render(ctxt)
 }
 
-func (jv FullJsonView) RenderString(ctxt *web.Context) (string, error) {
-	return JsonView(jv).RenderString(ctxt)
+func (jv FullJSONView) RenderString(ctxt *web.Context) (string, error) {
+	return JSONView(jv).RenderString(ctxt)
 }
 
-func (jv FullJsonView) Publish(ctxt *web.Context) error {
-	return JsonView(jv).Publish(ctxt)
+func (jv FullJSONView) Publish(ctxt *web.Context) error {
+	return JSONView(jv).Publish(ctxt)
 }
 
-func (jv *FullJsonView) SetVMap(vmap ...mvc.VM) {
+func (jv *FullJSONView) SetVMap(vmap ...mvc.VM) {
 	if *jv == nil {
-		*jv = NewFullJsonView(nil)
+		*jv = NewFullJSONView(nil)
 	}
 
 	_vmap := *jv
@@ -98,25 +98,25 @@ func (jv *FullJsonView) SetVMap(vmap ...mvc.VM) {
 	}
 }
 
-func (jv *FullJsonView) SetData(name string, value interface{}) {
+func (jv *FullJSONView) SetData(name string, value interface{}) {
 	if *jv == nil {
-		*jv = NewFullJsonView(nil)
+		*jv = NewFullJSONView(nil)
 	}
 
 	_vmap := *jv
 	_vmap[name] = value
 }
 
-func NewJsonView(vmap mvc.VM) JsonView {
+func NewJSONView(vmap mvc.VM) JSONView {
 	if vmap == nil {
 		vmap = mvc.VM{}
 	}
-	return JsonView(vmap)
+	return JSONView(vmap)
 }
 
-func NewFullJsonView(vmap mvc.VM) FullJsonView {
+func NewFullJSONView(vmap mvc.VM) FullJSONView {
 	if vmap == nil {
 		vmap = mvc.VM{}
 	}
-	return FullJsonView(NewJsonView(vmap))
+	return FullJSONView(NewJSONView(vmap))
 }

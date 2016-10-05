@@ -63,19 +63,19 @@ func (rv *ResultView) SetData(name string, value interface{}) {
 }
 
 func (rv *ResultView) ContentType(ctxt *web.Context) string {
-	return GetContentType(mvc.GetMvcMeta(ctxt)[mvc.MVC_TYPE])
+	return GetContentType(mvc.GetMvcMeta(ctxt)[mvc.MVCType])
 }
 
-func (rv *ResultView) getTmpl(names mvc.MvcMeta) (tmpl *template.Template, ext string, err error) {
-	ext = names[mvc.MVC_TYPE]
+func (rv *ResultView) getTmpl(names mvc.Meta) (tmpl *template.Template, ext string, err error) {
+	ext = names[mvc.MVCType]
 
 	if rv.GetTmpl != nil {
 		tmpl, err = rv.GetTmpl(rv.fmap)
 	} else {
-		tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ext), rv.fmap)
+		tmpl, err = mvc.GetHTMLTmpl(mvc.GetTemplateRelPath(names, ext), rv.fmap)
 
 		if err != nil && ext != ".html" {
-			tmpl, err = mvc.GetHtmlTmpl(mvc.GetTemplateRelPath(names, ".html"), rv.fmap)
+			tmpl, err = mvc.GetHTMLTmpl(mvc.GetTemplateRelPath(names, ".html"), rv.fmap)
 			ext = ".html"
 		}
 	}
@@ -118,8 +118,8 @@ func (rv *ResultView) RenderString(ctxt *web.Context) (s string, err error) {
 
 func (rv *ResultView) Publish(ctxt *web.Context) (err error) {
 	names := mvc.GetMvcMeta(ctxt)
-	if names[mvc.MVC_ACTION] == "" {
-		names[mvc.MVC_ACTION] = "_"
+	if names[mvc.MVCAction] == "" {
+		names[mvc.MVCAction] = "_"
 	}
 
 	var tmpl *template.Template
@@ -167,8 +167,8 @@ func (rv *ResultView) Publish(ctxt *web.Context) (err error) {
 
 		if method != "HEAD" {
 			var err error
-			var b *bytes.Buffer = bytes.NewBuffer(make([]byte, 0, 5120))
-			var tw io.Writer = io.MultiWriter(ctxt.Response, b)
+			var b = bytes.NewBuffer(make([]byte, 0, 5120))
+			var tw = io.MultiWriter(ctxt.Response, b)
 			var gzipwriter *gzip.Writer
 
 			if ctxt.ReqHeaderHas("Accept-Encoding", "gzip") {

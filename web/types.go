@@ -26,7 +26,7 @@ type FormInt64 int64
 type FormFloat float32
 type FormFloat64 float64
 type FormEmail string
-type FormUrl string
+type FormURL string
 type FormDate time.Time
 type FormTime time.Duration
 type FormDateTime time.Time
@@ -184,7 +184,7 @@ func (data PData) Email(key string) (s string, err error) {
 	return
 }
 
-func (data PData) Url(key string) (s string, err error) {
+func (data PData) Url(key string) (string, error) {
 	return data.URL(key)
 }
 

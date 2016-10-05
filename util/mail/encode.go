@@ -58,7 +58,7 @@ func (me *MessageEncoder) Write(p []byte) (int, error) {
 				me.i = 0
 			}
 			me.b = append(me.b, b)
-			me.i += 1
+			me.i++
 			issp = b == ' ' || b == '\t'
 		default:
 			if me.i+3 >= lenlimit {

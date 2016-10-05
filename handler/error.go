@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-const TEMPLATE_FOLDER = "./errors/"
-const TEMPLATE = `<!DOCTYPE html>
+const templateFolder = "./errors/"
+const templateString = `<!DOCTYPE html>
 <html>
 <head>
 	<title>{{.statuscode}} {{.statustext}}</title>
@@ -34,12 +34,12 @@ var (
 )
 
 func init() {
-	if st, err := os.Stat(TEMPLATE_FOLDER + "0.html"); err == nil && !st.IsDir() {
-		templateCache, _ = template.ParseFiles(TEMPLATE_FOLDER + "0.html")
+	if st, err := os.Stat(templateFolder + "0.html"); err == nil && !st.IsDir() {
+		templateCache, _ = template.ParseFiles(templateFolder + "0.html")
 	}
 	if templateCache == nil {
 		templateCache = template.New("0.html")
-		templateCache.Parse(TEMPLATE)
+		templateCache.Parse(templateString)
 	}
 }
 
@@ -56,25 +56,25 @@ func NewForbiddenHandler() http.Handler {
 }
 
 func NotFound(w http.ResponseWriter, r *http.Request) {
-	ErrorHtml(w, r, http.StatusNotFound)
+	ErrorHTML(w, r, http.StatusNotFound)
 }
 
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
-	ErrorHtml(w, r, http.StatusInternalServerError)
+	ErrorHTML(w, r, http.StatusInternalServerError)
 }
 
 func Forbidden(w http.ResponseWriter, r *http.Request) {
-	ErrorHtml(w, r, http.StatusForbidden)
+	ErrorHTML(w, r, http.StatusForbidden)
 }
 
-func ErrorHtml(w http.ResponseWriter, r *http.Request, status int) {
+func ErrorHTML(w http.ResponseWriter, r *http.Request, status int) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
 		}
 	}()
 
-	if f, err := os.Open(TEMPLATE_FOLDER + strconv.Itoa(status) + ".html"); err == nil {
+	if f, err := os.Open(templateFolder + strconv.Itoa(status) + ".html"); err == nil {
 		defer f.Close()
 
 		// we must not send the last-modified header of the file

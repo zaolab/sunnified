@@ -19,8 +19,8 @@ import (
 	"github.com/zaolab/sunnified/util/validate"
 )
 
-const DEFAULT_ATTACHMENT_LIMIT = 25 * 1024 * 1024
-const MAX_INT = int64(^uint64(0) >> 1)
+const DefaultAttachmentLimit = 25 * 1024 * 1024
+const MaxInt = int64(^uint64(0) >> 1)
 
 var ErrEmailInvalid = errors.New("invalid email address")
 var ErrFileIsDir = errors.New("cannot attach directory")
@@ -100,9 +100,9 @@ func (m *Mail) DelHeader(key string) {
 
 func (m *Mail) AttachmentLimit() int64 {
 	if m.attlimit == 0 {
-		m.attlimit = DEFAULT_ATTACHMENT_LIMIT
+		m.attlimit = DefaultAttachmentLimit
 	} else if m.attlimit == -1 {
-		m.attlimit = MAX_INT
+		m.attlimit = MaxInt
 	}
 
 	return m.attlimit
@@ -116,18 +116,18 @@ func (m *Mail) SetTo(email string, name string) error {
 	if validate.IsEmail(email) {
 		m.to = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) AddTo(email, name string) error {
 	if validate.IsEmail(email) {
 		m.to = append(m.to, mail.Address{Name: name, Address: email})
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) To() Addresses {
@@ -140,9 +140,9 @@ func (m *Mail) SetFrom(email, name string) error {
 	if validate.IsEmail(email) {
 		m.from = mail.Address{Name: name, Address: email}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) From() mail.Address {
@@ -153,18 +153,18 @@ func (m *Mail) SetCc(email, name string) error {
 	if validate.IsEmail(email) {
 		m.cc = Addresses{mail.Address{Name: name, Address: email}}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) AddCc(email, name string) error {
 	if validate.IsEmail(email) {
 		m.cc = append(m.cc, mail.Address{Name: name, Address: email})
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) Cc() Addresses {
@@ -178,9 +178,9 @@ func (m *Mail) SetBcc(email, name string) error {
 		a := mail.Address{Name: name, Address: email}
 		m.bcc = Addresses{a}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) AddBcc(email, name string) error {
@@ -188,9 +188,9 @@ func (m *Mail) AddBcc(email, name string) error {
 		a := mail.Address{Name: name, Address: email}
 		m.bcc = append(m.bcc, a)
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) Bcc() Addresses {
@@ -203,9 +203,9 @@ func (m *Mail) SetReplyTo(email, name string) error {
 	if validate.IsEmail(email) {
 		m.replyto = mail.Address{Name: name, Address: email}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) ReplyTo() mail.Address {
@@ -216,17 +216,17 @@ func (m *Mail) SetBounceTo(email string) error {
 	if validate.IsEmail(email) {
 		m.bounce = mail.Address{Name: "", Address: email}
 		return nil
-	} else {
-		return ErrEmailInvalid
 	}
+
+	return ErrEmailInvalid
 }
 
 func (m *Mail) BounceTo() mail.Address {
 	if m.bounce.Address == "" {
 		return m.from
-	} else {
-		return m.bounce
 	}
+
+	return m.bounce
 }
 
 func (m *Mail) SetSubject(subj string) {

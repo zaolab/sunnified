@@ -15,10 +15,10 @@ type DynamicHandler struct {
 	controller string
 	action     string
 	mutex      sync.RWMutex
-	ctrlgroup  *controller.ControllerGroup
+	ctrlgroup  *controller.Group
 }
 
-func NewDynamicHandler(ctrlgroup *controller.ControllerGroup) *DynamicHandler {
+func NewDynamicHandler(ctrlgroup *controller.Group) *DynamicHandler {
 	if ctrlgroup == nil {
 		ctrlgroup = controller.GetDefaultControllerGroup()
 	}
@@ -28,7 +28,7 @@ func NewDynamicHandler(ctrlgroup *controller.ControllerGroup) *DynamicHandler {
 	}
 }
 
-func NewDefaultDynamicHandler(ctrlgroup *controller.ControllerGroup, action, control, mod string) *DynamicHandler {
+func NewDefaultDynamicHandler(ctrlgroup *controller.Group, action, control, mod string) *DynamicHandler {
 	if ctrlgroup == nil {
 		ctrlgroup = controller.GetDefaultControllerGroup()
 	}
@@ -111,7 +111,7 @@ func (dh *DynamicHandler) ServeContextHTTP(context *web.Context) {
 		ctrlmgr.Prepare()
 		state, vw := ctrlmgr.Execute()
 		if state != -1 && vw == nil {
-			ErrorHtml(context.Response, context.Request, state)
+			ErrorHTML(context.Response, context.Request, state)
 			return
 		}
 		ctrlmgr.PublishView()

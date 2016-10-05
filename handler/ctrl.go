@@ -10,7 +10,7 @@ import (
 )
 
 type ControllerHandler struct {
-	controlmeta *controller.ControllerMeta
+	controlmeta *controller.Meta
 	action      string
 }
 
@@ -18,7 +18,7 @@ func NewControllerHandler() http.Handler {
 	return &ControllerHandler{}
 }
 
-func NewDefaultControllerHandler(controlmeta *controller.ControllerMeta, action string) *ControllerHandler {
+func NewDefaultControllerHandler(controlmeta *controller.Meta, action string) *ControllerHandler {
 	return &ControllerHandler{
 		controlmeta: controlmeta,
 		action:      action,
@@ -35,7 +35,7 @@ func (ch *ControllerHandler) SetController(mod, ctrler string) {
 	ch.controlmeta = controller.Controller(mod, ctrler)
 }
 
-func (ch *ControllerHandler) SetControllerMeta(controlmeta *controller.ControllerMeta) {
+func (ch *ControllerHandler) SetControllerMeta(controlmeta *controller.Meta) {
 	ch.controlmeta = controlmeta
 }
 
@@ -52,7 +52,7 @@ func (ch *ControllerHandler) ServeContextOptions(ctxt *web.Context, origin map[s
 	header := ctxt.Response.Header()
 	ctrlmgr := ch.GetControlManager(ctxt)
 	mlist := ctrlmgr.AvailableMethodsList()
-	var allow string = "HEAD, OPTIONS"
+	var allow = "HEAD, OPTIONS"
 	mliststr := strings.Join(mlist, ", ")
 	if mliststr != "" {
 		allow += ", " + mliststr
@@ -71,7 +71,7 @@ func (ch *ControllerHandler) ServeContextHTTP(ctxt *web.Context) {
 		ctrlmgr.Prepare()
 		state, vw := ctrlmgr.Execute()
 		if state != -1 && vw == nil {
-			ErrorHtml(ctxt.Response, ctxt.Request, state)
+			ErrorHTML(ctxt.Response, ctxt.Request, state)
 			return
 		}
 		ctrlmgr.PublishView()
@@ -83,7 +83,7 @@ func (ch *ControllerHandler) ServeContextHTTP(ctxt *web.Context) {
 
 func (ch *ControllerHandler) GetControlManager(context *web.Context) (cm *controller.ControlManager) {
 	var (
-		act    string = ch.action
+		act    = ch.action
 		action string
 		acterr error
 	)

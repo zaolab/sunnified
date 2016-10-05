@@ -8,7 +8,7 @@ import (
 
 func NewHTMLHeadMiddleWare() *HTMLHeadMiddleWare {
 	return &HTMLHeadMiddleWare{
-		defaultCss:     make([]string, 0, 1),
+		defaultCSS:     make([]string, 0, 1),
 		defaultScripts: make([]string, 0, 1),
 		cssbatch:       make(map[string][]string),
 		scriptbatch:    make(map[string][]string),
@@ -22,7 +22,7 @@ func HTMLHeadMiddleWareConstructor() MiddleWare {
 type HTMLHeadMiddleWare struct {
 	BaseMiddleWare
 	defaultTitle   string
-	defaultCss     []string
+	defaultCSS     []string
 	defaultScripts []string
 	cssbatch       map[string][]string
 	scriptbatch    map[string][]string
@@ -43,8 +43,8 @@ func (mw *HTMLHeadMiddleWare) Body(ctxt *web.Context) {
 	if mw.defaultTitle != "" {
 		head.SetTitle(mw.defaultTitle)
 	}
-	if mw.defaultCss != nil && len(mw.defaultCss) > 0 {
-		head.AddCss(mw.defaultCss...)
+	if mw.defaultCSS != nil && len(mw.defaultCSS) > 0 {
+		head.AddCSS(mw.defaultCSS...)
 	}
 	if mw.defaultScripts != nil && len(mw.defaultScripts) > 0 {
 		head.AddScript(mw.defaultScripts...)
@@ -55,20 +55,20 @@ func (mw *HTMLHeadMiddleWare) View(ctxt *web.Context, vw mvc.View) {
 	var head *HTMLHead
 	if dview, ok := vw.(mvc.DataView); ok && ctxt.MapResourceValue("htmlhead", &head) == nil && head != nil {
 		dview.SetData("Htmlhead_Title", head.Title())
-		dview.SetData("Htmlhead_Css", head.Css())
+		dview.SetData("Htmlhead_Css", head.CSS())
 		dview.SetData("Htmlhead_Scripts", head.Scripts())
 	}
 }
 
-func (mw *HTMLHeadMiddleWare) AddDefaultCss(css ...string) {
-	mw.defaultCss = append(mw.defaultCss, css...)
+func (mw *HTMLHeadMiddleWare) AddDefaultCSS(css ...string) {
+	mw.defaultCSS = append(mw.defaultCSS, css...)
 }
 
 func (mw *HTMLHeadMiddleWare) AddDefaultScript(script ...string) {
 	mw.defaultScripts = append(mw.defaultScripts, script...)
 }
 
-func (mw *HTMLHeadMiddleWare) CreateCssBatch(name string, css ...string) {
+func (mw *HTMLHeadMiddleWare) CreateCSSBatch(name string, css ...string) {
 	if arr, exists := mw.cssbatch[name]; exists {
 		mw.cssbatch[name] = append(arr, css...)
 	} else {
@@ -102,7 +102,7 @@ func (h *HTMLHead) Title() string {
 	return h.title
 }
 
-func (h *HTMLHead) Css() []string {
+func (h *HTMLHead) CSS() []string {
 	return h.css
 }
 
@@ -114,7 +114,7 @@ func (h *HTMLHead) SetTitle(title string) {
 	h.title = title
 }
 
-func (h *HTMLHead) AddCss(css ...string) {
+func (h *HTMLHead) AddCSS(css ...string) {
 	h.css = append(h.css, css...)
 }
 
@@ -122,9 +122,9 @@ func (h *HTMLHead) AddScript(script ...string) {
 	h.scripts = append(h.scripts, script...)
 }
 
-func (h *HTMLHead) AddCssBatch(name string) {
+func (h *HTMLHead) AddCSSBatch(name string) {
 	if arr, exists := h.cssbatch[name]; exists && !validate.IsIn(name, h.addedcss...) {
-		h.AddCss(arr...)
+		h.AddCSS(arr...)
 		h.addedcss = append(h.addedcss, name)
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/zaolab/sunnified/util"
 )
 
-const COMFORT_LEN = 10
+const ComfortLen = 10
 
 type List struct {
 	util.ValueGetter
@@ -21,10 +21,10 @@ type List struct {
 
 func NewList(data ...interface{}) (li *List) {
 	li = &List{
-		list:    make([]interface{}, COMFORT_LEN),
+		list:    make([]interface{}, ComfortLen),
 		mutex:   &sync.RWMutex{},
-		caplist: COMFORT_LEN,
-		exlen:   COMFORT_LEN,
+		caplist: ComfortLen,
+		exlen:   ComfortLen,
 	}
 
 	li.ValueGetter = util.ValueGetter(li.getvalue)
@@ -285,8 +285,8 @@ func (l *List) Clear() {
 
 func (l *List) clear() {
 	l.lenlist = 0
-	l.caplist = COMFORT_LEN
-	l.exlen = COMFORT_LEN
+	l.caplist = ComfortLen
+	l.exlen = ComfortLen
 	l.list = make([]interface{}, l.caplist)
 }
 

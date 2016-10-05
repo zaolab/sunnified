@@ -8,43 +8,43 @@ import (
 type DataType int
 
 const (
-	DATATYPE_STRING_SUFFIX   = "_String"
-	DATATYPE_INT_SUFFIX      = "_Int"
-	DATATYPE_INT64_SUFFIX    = "_Int64"
-	DATATYPE_FLOAT_SUFFIX    = "_Float"
-	DATATYPE_FLOAT64_SUFFIX  = "_Float64"
-	DATATYPE_EMAIL_SUFFIX    = "_Email"
-	DATATYPE_URL_SUFFIX      = "_Url"
-	DATATYPE_DATE_SUFFIX     = "_Date"
-	DATATYPE_TIME_SUFFIX     = "_Time"
-	DATATYPE_DATETIME_SUFFIX = "_Datetime"
-	DATATYPE_BOOL_SUFFIX     = "_Bool"
+	DatatypeStringSuffix = "_String"
+	DatatypeIntSuffix = "_Int"
+	DatatypeInt64Suffix = "_Int64"
+	DatatypeFloatSuffix = "_Float"
+	DatatypeFloat64Suffix = "_Float64"
+	DatatypeEmailSuffix = "_Email"
+	DatatypeURLSuffix = "_Url"
+	DatatypeDateSuffix = "_Date"
+	DatatypeTimeSuffix = "_Time"
+	DatatypeDateTimeSuffix = "_Datetime"
+	DatatypeBoolSuffix = "_Bool"
 
-	FORM_VALUETYPE_TAG_NAME = "value.type"
-	FORM_VALUETYPE_LPREFIX  = "form_"
+	FormValueTypeTagName = "value.type"
+	FormValueTypeLprefix = "form_"
 )
 
 const (
-	DATATYPE_WEBCONTEXT DataType = 1 + iota
-	DATATYPE_REQUEST
-	DATATYPE_RESPONSEWRITER
-	DATATYPE_UPATH
-	DATATYPE_UPATH_SLICE
-	DATATYPE_PDATA
-	DATATYPE_PDATA_MAP
-	DATATYPE_STRUCT
-	DATATYPE_STRING
-	DATATYPE_INT
-	DATATYPE_INT64
-	DATATYPE_FLOAT
-	DATATYPE_FLOAT64
-	DATATYPE_EMAIL
-	DATATYPE_URL
-	DATATYPE_DATE
-	DATATYPE_TIME
-	DATATYPE_DATETIME
-	DATATYPE_BOOL
-	DATATYPE_EMBEDDED
+	DatatypeWebContext DataType = 1 + iota
+	DatatypeRequest
+	DatatypeResponseWriter
+	DatatypeUpath
+	DatatypeUpathSlice
+	DatatypePdata
+	DatatypePdataMap
+	DatatypeStruct
+	DatatypeString
+	DatatypeInt
+	DatatypeInt64
+	DatatypeFloat
+	DatatypeFloat64
+	DatatypeEmail
+	DatatypeURL
+	DatatypeDate
+	DatatypeTime
+	DatatypeDateTime
+	DatatypeBool
+	DatatypeEmbedded
 )
 
 type ActionMeta struct {

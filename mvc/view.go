@@ -15,15 +15,15 @@ import (
 )
 
 var (
-	htmplcache                  = make(map[string]*htcachedetails)
-	hmutex                      = sync.RWMutex{}
-	ttmplcache                  = make(map[string]*ttcachedetails)
-	tmutex                      = sync.RWMutex{}
-	CacheDuration time.Duration = time.Minute * 1 / 60
-	fmutex                      = sync.RWMutex{}
-	funcnames                   = make(template.FuncMap)
-	urlreplchars                = regexp.MustCompile(`[\s\.,]`)
-	urldumpchars                = regexp.MustCompile(`['"&@#%=<>:;\/\\\$\^\+\|\[\]\?\{\}]`)
+	htmplcache    = make(map[string]*htcachedetails)
+	hmutex        = sync.RWMutex{}
+	ttmplcache    = make(map[string]*ttcachedetails)
+	tmutex        = sync.RWMutex{}
+	CacheDuration = time.Minute * 1 / 60
+	fmutex        = sync.RWMutex{}
+	funcnames     = make(template.FuncMap)
+	urlreplchars  = regexp.MustCompile(`[\s\.,]`)
+	urldumpchars  = regexp.MustCompile(`['"&@#%=<>:;\/\\\$\^\+\|\[\]\?\{\}]`)
 )
 
 func AddFuncName(names ...string) {
@@ -52,8 +52,8 @@ func emptyf(s ...interface{}) string {
 	return ""
 }
 
-func GetTemplateRelPath(names MvcMeta, ext string) string {
-	return fmt.Sprintf("themes/default/tmpl/%s/%s/%s%s", names[MVC_MODULE], names[MVC_CONTROLLER], names[MVC_ACTION], ext)
+func GetTemplateRelPath(names Meta, ext string) string {
+	return fmt.Sprintf("themes/default/tmpl/%s/%s/%s%s", names[MVCModule], names[MVCController], names[MVCAction], ext)
 }
 
 type View interface {
@@ -68,7 +68,7 @@ type TmplView interface {
 	SetViewFuncName(string)
 }
 
-type HtmlTmplView interface {
+type HTMLTmplView interface {
 	TmplView
 	SetGetTmpl(func(fmap template.FuncMap) (t *template.Template, err error))
 }
@@ -93,8 +93,8 @@ type ttcachedetails struct {
 	t     *txtemplate.Template
 }
 
-func GetHtmlTmpl(p string, fmap template.FuncMap) (t *template.Template, err error) {
-	if t = getHtmlCache(p); t == nil {
+func GetHTMLTmpl(p string, fmap template.FuncMap) (t *template.Template, err error) {
+	if t = getHTMLCache(p); t == nil {
 		ap, e := filepath.Abs(p)
 		if e != nil {
 			ap = p
@@ -113,7 +113,7 @@ func GetHtmlTmpl(p string, fmap template.FuncMap) (t *template.Template, err err
 			panic(err)
 		}
 
-		setHtmlCache(p, t)
+		setHTMLCache(p, t)
 		t, _ = t.Clone()
 	}
 
@@ -149,7 +149,7 @@ func GetTextTmpl(p string, fmap txtemplate.FuncMap) (t *txtemplate.Template, err
 	return
 }
 
-func getHtmlCache(p string) *template.Template {
+func getHTMLCache(p string) *template.Template {
 	hmutex.RLock()
 	defer hmutex.RUnlock()
 	if _, ok := htmplcache[p]; ok {
@@ -160,7 +160,7 @@ func getHtmlCache(p string) *template.Template {
 	return nil
 }
 
-func setHtmlCache(p string, t *template.Template) {
+func setHTMLCache(p string, t *template.Template) {
 	hmutex.Lock()
 	defer hmutex.Unlock()
 	if _, ok := htmplcache[p]; ok {
@@ -168,11 +168,11 @@ func setHtmlCache(p string, t *template.Template) {
 		htmplcache[p].t = nil
 	}
 
-	timer := time.AfterFunc(CacheDuration, func() { delHtmlCache(p) })
+	timer := time.AfterFunc(CacheDuration, func() { delHTMLCache(p) })
 	htmplcache[p] = &htcachedetails{timer, t}
 }
 
-func delHtmlCache(p string) {
+func delHTMLCache(p string) {
 	hmutex.Lock()
 	defer hmutex.Unlock()
 	if _, ok := htmplcache[p]; ok {
@@ -215,7 +215,7 @@ func delTextCache(p string) {
 	}
 }
 
-func UrlSafeTrashString(s string) string {
+func URLSafeTrashString(s string) string {
 	s = urlreplchars.ReplaceAllLiteralString(s, "-")
 	s = urldumpchars.ReplaceAllLiteralString(s, "")
 	return url.QueryEscape(s)

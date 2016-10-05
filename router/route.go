@@ -15,17 +15,17 @@ var ErrInvalidHandler = errors.New("invalid handler")
 
 const (
 	_ = iota
-	ROUTE_HARD
-	ROUTE_REGEX
-	ROUTE_TYPED
-	ROUTE_SOFT
+	RouteHard
+	RouteRegex
+	RouteTyped
+	RouteSoft
 )
 
 const (
-	MATCHTYPE_INT = iota
-	MATCHTYPE_INT64
-	MATCHTYPE_FLOAT
-	MATCHTYPE_FLOAT64
+	MatchtypeInt = iota
+	MatchtypeInt64
+	MatchtypeFloat
+	MatchtypeFloat64
 )
 
 type ContextHTTPHandler struct {
@@ -137,27 +137,27 @@ func (sr *SunnyRoute) BuildRoute(p string) (varnames [][]string, rts []Route) {
 
 			switch strings.ToLower(curpathsplit[1]) {
 			case "int32", "int":
-				if rt = sr.typeroute[MATCHTYPE_INT]; rt == nil {
+				if rt = sr.typeroute[MatchtypeInt]; rt == nil {
 					rt = NewSunnyRoute()
-					sr.typeroute[MATCHTYPE_INT] = rt
+					sr.typeroute[MatchtypeInt] = rt
 				}
 
 			case "int64":
-				if rt = sr.typeroute[MATCHTYPE_INT64]; rt == nil {
+				if rt = sr.typeroute[MatchtypeInt64]; rt == nil {
 					rt = NewSunnyRoute()
-					sr.typeroute[MATCHTYPE_INT64] = rt
+					sr.typeroute[MatchtypeInt64] = rt
 				}
 
 			case "float32", "float":
-				if rt = sr.typeroute[MATCHTYPE_FLOAT]; rt == nil {
+				if rt = sr.typeroute[MatchtypeFloat]; rt == nil {
 					rt = NewSunnyRoute()
-					sr.typeroute[MATCHTYPE_FLOAT] = rt
+					sr.typeroute[MatchtypeFloat] = rt
 				}
 
 			case "float64":
-				if rt = sr.typeroute[MATCHTYPE_FLOAT64]; rt == nil {
+				if rt = sr.typeroute[MatchtypeFloat64]; rt == nil {
 					rt = NewSunnyRoute()
-					sr.typeroute[MATCHTYPE_FLOAT64] = rt
+					sr.typeroute[MatchtypeFloat64] = rt
 				}
 
 			default:
@@ -311,9 +311,9 @@ func (sr *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []strin
 	if lpath <= 0 {
 		if sr.hardend != nil {
 			return sr.hardend, p, data
-		} else {
-			return sr.softend, p, data
 		}
+
+		return sr.softend, p, data
 	}
 
 	var curpath = p[0]
@@ -351,19 +351,19 @@ func (sr *SunnyRoute) FindEndPoint(p []string, data []string) (EndPoint, []strin
 			continue
 		}
 		switch rtype {
-		case MATCHTYPE_INT:
+		case MatchtypeInt:
 			if _, err := strconv.Atoi(typepath); err == nil {
 				return nextEndPoint(route, typepath, p, data)
 			}
-		case MATCHTYPE_INT64:
+		case MatchtypeInt64:
 			if _, err := strconv.ParseInt(typepath, 10, 0); err == nil {
 				return nextEndPoint(route, typepath, p, data)
 			}
-		case MATCHTYPE_FLOAT:
+		case MatchtypeFloat:
 			if _, err := strconv.ParseFloat(typepath, 32); err == nil {
 				return nextEndPoint(route, typepath, p, data)
 			}
-		case MATCHTYPE_FLOAT64:
+		case MatchtypeFloat64:
 			if _, err := strconv.ParseFloat(typepath, 64); err == nil {
 				return nextEndPoint(route, typepath, p, data)
 			}

@@ -10,23 +10,22 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
-	"hash"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 const (
-	//d_securityKey		    = "\x69\x51\xe8\x41\x50\x83\x19\xa4\xf0\x2f\xac\x7d\x99\xb7\x5e\xbe\x7e\x32\xf5\xa5\xf7\x1f\x43\x04\x96\xdd\x1b\xf0\x93\x4e\xc5\x44"
-	//d_csrfToken			= "\xc7\x58\xa7\xf2\x15\x79\x54\x34\x24\xeb\x45\x50\x33\x0f\xa5\x52\x95\x36\x06\xb0\xb7\xdb\x5d\xa7\x07\xcf\xa5\x1c\x10\xe7\x4b\xd4"
-	//d_hashSalt			= "\x5d\xfb\xcf\x47\x30\xce\x2e\x43\xfa\x1c\x5f\xee\x76\x0f\xd7\x31\x14\x07\x24\xa8\xbf\xd0\x3c\x88\xfc\xa3\xdc\x3b\xae\xaa\x3a\x15"
-	//d_csrfTokenLife		= 14400
-	CSRF_TOKEN_MIN_LIFE       = 3600
-	CSRF_DEFAULT_TOKEN_LIFE   = 14400
-	CSRF_DEFAULT_COOKIE_NAME  = "XSRF-TOKEN"
-	CSRF_DEFAULT_REQUEST_NAME = "X-XSRF-TOKEN"
-	CSRF_TIMESTAMP_LEN        = 5
-	CSRF_RAND_TOKEN_LEN       = 16
+	//dSecurityKey		    = "\x69\x51\xe8\x41\x50\x83\x19\xa4\xf0\x2f\xac\x7d\x99\xb7\x5e\xbe\x7e\x32\xf5\xa5\xf7\x1f\x43\x04\x96\xdd\x1b\xf0\x93\x4e\xc5\x44"
+	//dCSRFToken			= "\xc7\x58\xa7\xf2\x15\x79\x54\x34\x24\xeb\x45\x50\x33\x0f\xa5\x52\x95\x36\x06\xb0\xb7\xdb\x5d\xa7\x07\xcf\xa5\x1c\x10\xe7\x4b\xd4"
+	//dHashSalt			= "\x5d\xfb\xcf\x47\x30\xce\x2e\x43\xfa\x1c\x5f\xee\x76\x0f\xd7\x31\x14\x07\x24\xa8\xbf\xd0\x3c\x88\xfc\xa3\xdc\x3b\xae\xaa\x3a\x15"
+	//dCSRFTokenLife		= 14400
+	CSRFTokenMinLife = 3600
+	CSRFDefaultTokenLife = 14400
+	CSRFDefaultCookieName = "XSRF-TOKEN"
+	CSRFDefaultRequestName = "X-XSRF-TOKEN"
+	CSRFTimestampLen = 5
+	CSRFRandTokenLen = 16
 )
 
 // the resultant hash length should be longer than or equals to sessEntropy
@@ -54,19 +53,19 @@ func NewCSRFGate(settings CSRFGateConfig) *CSRFGate {
 	}
 
 	if settings.Tokenlife == 0 {
-		settings.Tokenlife = CSRF_DEFAULT_TOKEN_LIFE
+		settings.Tokenlife = CSRFDefaultTokenLife
 	}
 	if settings.Reqname == "" {
-		settings.Reqname = CSRF_DEFAULT_REQUEST_NAME
+		settings.Reqname = CSRFDefaultRequestName
 	}
 	if settings.Cookiename == "" {
-		settings.Cookiename = CSRF_DEFAULT_COOKIE_NAME
+		settings.Cookiename = CSRFDefaultCookieName
 	}
 
 	return &CSRFGate{config: settings}
 }
 
-type CsrfRequestBody struct {
+type CSRFRequestBody struct {
 	Name   string
 	Value  string
 	Cookie *http.Cookie
@@ -76,7 +75,7 @@ type CsrfRequestBody struct {
 // SetCSRFToken returns a CsrfRequestBody containing the name and value to be used
 // as a query string or form input that can be verified by VerifyCSRFToken.
 // Additionally, a cookie will be set (if ResponseWriter is not nil) to cross authenticate validity of token data if non exists
-func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CsrfRequestBody) {
+func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CSRFRequestBody) {
 	var (
 		randToken   []byte
 		msg         []byte
@@ -97,15 +96,15 @@ func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CsrfR
 	}
 	// if there are no random token from the cookie,
 	// generate a new one ourselves.
-	if err != nil || len(randToken) != CSRF_RAND_TOKEN_LEN {
-		randToken = GenRandomBytes(CSRF_RAND_TOKEN_LEN)
+	if err != nil || len(randToken) != CSRFRandTokenLen {
+		randToken = GenRandomBytes(CSRFRandTokenLen)
 
 		if randToken == nil {
 			// the randomness of this token is not as critical to security
-			lenToFill := CSRF_RAND_TOKEN_LEN
+			lenToFill := CSRFRandTokenLen
 			msgToHash := []byte(strconv.FormatInt(tstamp, 10))
 			msgToHash = append(msgToHash, currentToken...)
-			randToken = make([]byte, 0, CSRF_RAND_TOKEN_LEN)
+			randToken = make([]byte, 0, CSRFRandTokenLen)
 
 			// fill the random token slice using sha512 checksum
 			// if random token exceeds 64 bytes(len of sha512),
@@ -128,14 +127,14 @@ func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CsrfR
 		writeCookie = true
 	}
 
-	msg = make([]byte, 0, CSRF_TIMESTAMP_LEN+CSRF_RAND_TOKEN_LEN+len(currentToken))
+	msg = make([]byte, 0, CSRFTimestampLen + CSRFRandTokenLen +len(currentToken))
 	buf := bytes.NewBuffer(msg)
 	binary.Write(buf, binary.LittleEndian, tstamp)
 
 	// the csrf token consists of timestamp(5 bytes),
 	// random bytes(16 bytes),
 	// rolling global token(20bytes [sha1 checksum])
-	msg = append(msg[0:CSRF_TIMESTAMP_LEN], randToken...)
+	msg = append(msg[0:CSRFTimestampLen], randToken...)
 	msg = append(msg, currentToken...)
 
 	if value, err := AesCtrEncryptBase64(cg.config.Key, msg); err == nil {
@@ -187,28 +186,28 @@ func (cg *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 
 		result, err := AesCtrDecryptBase64(cg.config.Key, token)
 
-		if err != nil || len(result) <= (CSRF_TIMESTAMP_LEN+CSRF_RAND_TOKEN_LEN) {
+		if err != nil || len(result) <= (CSRFTimestampLen + CSRFRandTokenLen) {
 			return
 		}
 
-		lenTNC := CSRF_TIMESTAMP_LEN + CSRF_RAND_TOKEN_LEN
+		lenTNC := CSRFTimestampLen + CSRFRandTokenLen
 
-		tcreatedcap := CSRF_TIMESTAMP_LEN
+		tcreatedcap := CSRFTimestampLen
 		if tcreatedcap < 8 {
 			tcreatedcap = 8
 		}
 
-		tcreated := make([]byte, CSRF_TIMESTAMP_LEN, tcreatedcap)
+		tcreated := make([]byte, CSRFTimestampLen, tcreatedcap)
 
 		// copy into a new slice, append overwrites original slice data
-		copy(tcreated, result[0:CSRF_TIMESTAMP_LEN])
-		ckietoken := make([]byte, CSRF_RAND_TOKEN_LEN)
-		copy(ckietoken, result[CSRF_TIMESTAMP_LEN:lenTNC])
+		copy(tcreated, result[0:CSRFTimestampLen])
+		ckietoken := make([]byte, CSRFRandTokenLen)
+		copy(ckietoken, result[CSRFTimestampLen:lenTNC])
 		reqtoken := make([]byte, len(result)-lenTNC)
 		copy(reqtoken, result[lenTNC:])
 
-		if CSRF_TIMESTAMP_LEN < 8 {
-			filler := make([]byte, 8-CSRF_TIMESTAMP_LEN)
+		if CSRFTimestampLen < 8 {
+			filler := make([]byte, 8- CSRFTimestampLen)
 			tcreated = append(tcreated, filler...)
 		}
 
@@ -301,9 +300,9 @@ func GenRandomString(l int) string {
 
 	if rb != nil {
 		return string(rb)
-	} else {
-		return ""
 	}
+
+	return ""
 }
 
 func GenRandomBase64String(l int) string {
@@ -314,8 +313,8 @@ func GenRandomHexString(l int) string {
 	return hex.EncodeToString(GenRandomBytes(l))
 }
 
-func GenSessionId() string {
-	var h hash.Hash = sessHash()
+func GenSessionID() string {
+	var h = sessHash()
 	h.Write(GenRandomBytes(sessEnthropy))
 	h.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
 	id := make([]byte, 0, h.Size())

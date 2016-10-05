@@ -22,7 +22,7 @@ func init() {
 	binary.BigEndian.PutUint32(clamInstreamBufSizeBin, uint32(clamInstreamBufSize))
 }
 
-func NewClamAVScanner(network, address string) AVScanner {
+func NewClamAVScanner(network, address string) Scanner {
 	return ClamAVScanner{
 		network: network,
 		address: address,
@@ -34,7 +34,7 @@ type ClamAVScanner struct {
 	address string
 }
 
-func (av ClamAVScanner) ScanFile(filename string) (res AVResult, err error) {
+func (av ClamAVScanner) ScanFile(filename string) (res Result, err error) {
 	var (
 		conn    net.Conn
 		absname string
@@ -63,7 +63,7 @@ func (av ClamAVScanner) ScanFile(filename string) (res AVResult, err error) {
 	return
 }
 
-func (av ClamAVScanner) ScanBytes(d []byte) (res AVResult, err error) {
+func (av ClamAVScanner) ScanBytes(d []byte) (res Result, err error) {
 	var (
 		conn net.Conn
 		ld   int
@@ -106,7 +106,7 @@ func (av ClamAVScanner) ScanBytes(d []byte) (res AVResult, err error) {
 	return
 }
 
-func (av ClamAVScanner) ScanStream(r io.Reader) (res AVResult, err error) {
+func (av ClamAVScanner) ScanStream(r io.Reader) (res Result, err error) {
 	var (
 		conn net.Conn
 		buff = make([]byte, clamInstreamBufSize)
@@ -143,42 +143,42 @@ func (av ClamAVScanner) ScanStream(r io.Reader) (res AVResult, err error) {
 	return
 }
 
-func (av ClamAVScanner) ScanFileAsync(filename string) (c <-chan AVResultErr) {
-	c = make(chan AVResultErr, 1)
+func (av ClamAVScanner) ScanFileAsync(filename string) (c <-chan ResultErr) {
+	c = make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanFile(filename)
-		c <- AVResultErr{
-			AVResult: res,
-			Error:    err,
+		c <- ResultErr{
+			Result: res,
+			Error:  err,
 		}
 	}()
 
 	return c
 }
 
-func (av ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan AVResultErr) {
-	c = make(chan AVResultErr, 1)
+func (av ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan ResultErr) {
+	c = make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanBytes(d)
-		c <- AVResultErr{
-			AVResult: res,
-			Error:    err,
+		c <- ResultErr{
+			Result: res,
+			Error:  err,
 		}
 	}()
 
 	return c
 }
 
-func (av ClamAVScanner) ScanStreamAsync(r io.Reader) (c <-chan AVResultErr) {
-	c = make(chan AVResultErr, 1)
+func (av ClamAVScanner) ScanStreamAsync(r io.Reader) (c <-chan ResultErr) {
+	c = make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanStream(r)
-		c <- AVResultErr{
-			AVResult: res,
-			Error:    err,
+		c <- ResultErr{
+			Result: res,
+			Error:  err,
 		}
 	}()
 
@@ -189,7 +189,7 @@ func hasInvalidChars(filename string) bool {
 	return strings.ContainsAny(filename, "*?\"<>|\r\n\x00")
 }
 
-func parseResult(conn net.Conn) (res AVResult, err error) {
+func parseResult(conn net.Conn) (res Result, err error) {
 	var val []byte
 
 	if val, err = ioutil.ReadAll(conn); err != nil {

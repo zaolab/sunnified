@@ -15,22 +15,22 @@ var ErrResourceNotFound = errors.New("resource not found")
 var contentparser = make(map[string]ContentParser)
 
 const (
-	REQMETHOD_X_METHOD_NAME = "X-HTTP-Method-Override"
-	HTTP_X_FORWARDED_FOR    = "X-Forwarded-For"
-	HTTP_X_REAL_IP          = "X-Real-IP"
-	HTTP_X_REQUESTED_WITH   = "X-Requested-With"
+	ReqmethodXMethodName = "X-HTTP-Method-Override"
+	HTTPXForwardedFor = "X-Forwarded-For"
+	HTTPXRealIP = "X-Real-IP"
+	HTTPXRequestedWith = "X-Requested-With"
 )
 
 const (
-	USER_ANONYMOUS int = iota
-	USER_USER
-	USER_PREMIUMUSER
-	USER_WRITER
-	USER_SUPERWRITER
-	USER_MODERATOR
-	USER_SUPERMODERATOR
-	USER_ADMIN
-	USER_SUPERADMIN
+	UserAnonymous int = iota
+	UserUser
+	UserPremiumUser
+	UserWriter
+	UserSuperWriter
+	UserModerator
+	UserSuperModerator
+	UserAdmin
+	UserSuperAdmin
 )
 
 type Q map[string]string

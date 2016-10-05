@@ -6,7 +6,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-var mcache Memcache = Memcache{nil}
+var mcache = Memcache{nil}
 
 type Memcache struct {
 	*memcache.Client

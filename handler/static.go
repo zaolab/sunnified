@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/zaolab/sunnified/util/validate"
 	"github.com/zaolab/sunnified/web/resp"
 )
 
-const GZIP_EXT = ".gz"
-const TYPE_DEFAULT = "application/octet-stream"
+const gzipExt = ".gz"
+const typeDefault = "application/octet-stream"
 
 var separatorString = string(filepath.Separator)
 
@@ -96,12 +95,14 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var clen int64 = st.Size()
-	var modtime time.Time = st.ModTime()
-	var ext = path.Ext(fullpath)
-	var usegzip = clen > sh.GzipMinSize && ((gzipextl == 0 && sh.GzippedFile) ||
-		(gzipextl > 0 && (sh.Gzip[0] == "*" || validate.IsIn(ext, sh.Gzip...))))
-	var gzpath = fullpath + GZIP_EXT
+	var (
+		clen    = st.Size()
+		modtime = st.ModTime()
+		ext     = path.Ext(fullpath)
+		usegzip = clen > sh.GzipMinSize && ((gzipextl == 0 && sh.GzippedFile) ||
+			(gzipextl > 0 && (sh.Gzip[0] == "*" || validate.IsIn(ext, sh.Gzip...))))
+		gzpath = fullpath + gzipExt
+	)
 
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && usegzip {
 		if sh.GzippedFile {
@@ -113,7 +114,7 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				if ctype == "" {
 					if sh.DefaultType == "" {
-						ctype = TYPE_DEFAULT
+						ctype = typeDefault
 					} else {
 						ctype = sh.DefaultType
 					}
@@ -131,7 +132,7 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		etaggz = GZIP_EXT
+		etaggz = gzipExt
 		header.Set("Content-Encoding", "gzip")
 	}
 

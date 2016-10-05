@@ -10,7 +10,7 @@ import (
 	"text/template"
 )
 
-const DEFAULT_VIEWPATH = "views/"
+const DefaultViewPath = "views/"
 
 type CTemplate interface {
 	Execute(wr io.Writer, data interface{}) error
@@ -33,19 +33,19 @@ type SunnyPublisher struct {
 }
 
 func NewSunnyPublisher(p string) *SunnyPublisher {
-	var htmpl *htemplate.Template = htemplate.New("index.html")
-	var tmpl *template.Template = template.New("index")
-	var plen int = 0
+	var htmpl = htemplate.New("index.html")
+	var tmpl = template.New("index")
+	var plen int
 
 	if strings.Contains(p, `\`) {
 		p = strings.Replace(p, `\`, "/", -1)
 	} else if p == "" {
-		p = DEFAULT_VIEWPATH
+		p = DefaultViewPath
 	}
 
 	if plen = len(p); p[plen-1] != "/" {
 		p = p + "/"
-		plen += 1
+		plen++
 	}
 
 	filepath.Walk(p, func(path string, info os.FileInfo, err error) error {

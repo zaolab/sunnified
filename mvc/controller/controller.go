@@ -17,8 +17,8 @@ var ErrUnprepared = errors.New("controller has not been prep'ed")
 var ErrUnexecuted = errors.New("controller has not been executed")
 var ErrParseStruct = errors.New("Sunnified Parser error")
 
-const STRUCTVALUEFEED_TAG = "sunnified.feed"
-const STRUCTVALUERES_TAG = "sunnified.res"
+const StructValueFeedTag = "sunnified.feed"
+const StructValueResTag = "sunnified.res"
 
 type StructValueFeeder interface {
 	FeedStructValue(*web.Context, *FieldMeta, reflect.Value) (reflect.Value, error)
@@ -28,7 +28,7 @@ type ControlHandler interface {
 	GetControlManager(*web.Context) *ControlManager
 }
 
-func NewControlManager(context *web.Context, cm *ControllerMeta, action string) *ControlManager {
+func NewControlManager(context *web.Context, cm *Meta, action string) *ControlManager {
 	rtype := cm.RType()
 	if rtype.Kind() == reflect.Ptr {
 		rtype = rtype.Elem()
@@ -44,7 +44,7 @@ func NewControlManager(context *web.Context, cm *ControllerMeta, action string) 
 type ControlManager struct {
 	control     reflect.Value
 	context     *web.Context
-	controlmeta *ControllerMeta
+	controlmeta *Meta
 	action      string
 	prepared    bool
 	executed    bool
@@ -52,7 +52,7 @@ type ControlManager struct {
 	vw          mvc.View
 }
 
-func (c *ControlManager) SetControllerMeta(cm *ControllerMeta) (ok bool) {
+func (c *ControlManager) SetControllerMeta(cm *Meta) (ok bool) {
 	if !c.prepared {
 		rtype := cm.RType()
 		if rtype.Kind() == reflect.Ptr {
@@ -96,11 +96,11 @@ func (c *ControlManager) IsExecuted() bool {
 	return c.executed
 }
 
-func (c *ControlManager) MvcMeta() mvc.MvcMeta {
+func (c *ControlManager) MvcMeta() mvc.Meta {
 	if c.controlmeta != nil {
-		return mvc.MvcMeta{c.controlmeta.Module(), c.controlmeta.Name(), c.action, c.context.Ext}
+		return mvc.Meta{c.controlmeta.Module(), c.controlmeta.Name(), c.action, c.context.Ext}
 	}
-	return mvc.MvcMeta{}
+	return mvc.Meta{}
 }
 
 func (c *ControlManager) ModuleName() string {
@@ -126,7 +126,7 @@ func (c *ControlManager) Controller() reflect.Value {
 }
 
 func (c *ControlManager) ActionMeta() *ActionMeta {
-	return c.controlmeta.ActionFromRequest(c.MvcMeta()[mvc.MVC_ACTION], c.context)
+	return c.controlmeta.ActionFromRequest(c.MvcMeta()[mvc.MVCAction], c.context)
 }
 
 func (c *ControlManager) AvailableMethods() ReqMethod {
@@ -137,7 +137,7 @@ func (c *ControlManager) AvailableMethodsList() []string {
 	return c.controlmeta.ActionAvailableMethodsList(c.action)
 }
 
-func (c *ControlManager) ControllerMeta() *ControllerMeta {
+func (c *ControlManager) ControllerMeta() *Meta {
 	return c.controlmeta
 }
 
@@ -160,7 +160,7 @@ func (c *ControlManager) Prepare() error {
 		}
 
 		switch c.controlmeta.T() {
-		case CONTYPE_CONSTRUCTOR:
+		case ContypeConstructor:
 			results := c.control.Call(getArgSlice(c.controlmeta.Args(),
 				getVMap(c.context),
 				c.context.PData))
@@ -183,7 +183,7 @@ func (c *ControlManager) Prepare() error {
 
 				c.state = state
 			}
-		case CONTYPE_STRUCT, CONTYPE_SCONTROLLER:
+		case ContypeStruct, ContypeScontroller:
 			fields := c.controlmeta.Fields()
 			tmpcontrol := reflect.Indirect(c.control)
 
@@ -194,7 +194,7 @@ func (c *ControlManager) Prepare() error {
 
 				// allows middleware resources to make changes to value based on tag
 				// this can be useful to csrf where non csrf verified values are filtered
-				if res := field.Tag().Get(STRUCTVALUEFEED_TAG); res != "" {
+				if res := field.Tag().Get(StructValueFeedTag); res != "" {
 					var reses []string
 
 					if strings.Contains(res, ",") {
@@ -222,7 +222,7 @@ func (c *ControlManager) Prepare() error {
 							return ErrParseStruct
 						}
 					}
-				} else if res := field.Tag().Get(STRUCTVALUERES_TAG); res != "" {
+				} else if res := field.Tag().Get(StructValueResTag); res != "" {
 					rinterface := c.context.Resource(strings.TrimSpace(res))
 
 					if rinterface != nil {
@@ -235,7 +235,7 @@ func (c *ControlManager) Prepare() error {
 				}
 			}
 
-			if c.state != 500 && c.controlmeta.T() == CONTYPE_SCONTROLLER {
+			if c.state != 500 && c.controlmeta.T() == ContypeScontroller {
 				ctrler := c.control.Interface().(mvc.Controller)
 				ctrler.Construct_(c.context)
 			}
@@ -254,11 +254,11 @@ func (c *ControlManager) Execute() (state int, vw mvc.View) {
 		}
 
 		var results []reflect.Value
-		var rstyle ResultStyle = c.controlmeta.ResultStyle
+		var rstyle = c.controlmeta.ResultStyle
 
 		if c.state >= http.StatusOK && c.state < http.StatusMultipleChoices {
 			switch c.controlmeta.T() {
-			case CONTYPE_FUNC:
+			case ContypeFunc:
 				results = c.control.Call(getArgSlice(c.controlmeta.Args(),
 					getVMap(c.context),
 					c.context.PData))
@@ -340,7 +340,7 @@ func (c *ControlManager) PublishView() (err error) {
 }
 
 func (c *ControlManager) Cleanup() {
-	if c.prepared && c.controlmeta.T() == CONTYPE_SCONTROLLER {
+	if c.prepared && c.controlmeta.T() == ContypeScontroller {
 		ctrler := c.control.Interface().(mvc.Controller)
 		ctrler.Destruct_()
 	}
@@ -370,51 +370,51 @@ func getArgSlice(args []*ArgMeta, vmap map[string]reflect.Value, d web.PData) (v
 
 func getDataValue(arg *DataMeta, vmap map[string]reflect.Value, d web.PData) (value reflect.Value) {
 	switch arg.T() {
-	case DATATYPE_WEBCONTEXT:
+	case DatatypeWebContext:
 		value = vmap["context"]
-	case DATATYPE_REQUEST:
+	case DatatypeRequest:
 		value = vmap["r"]
-	case DATATYPE_RESPONSEWRITER:
+	case DatatypeResponseWriter:
 		value = vmap["w"]
-	case DATATYPE_UPATH:
+	case DatatypeUpath:
 		value = vmap["upath"]
-	case DATATYPE_UPATH_SLICE:
+	case DatatypeUpathSlice:
 		value = vmap["upath_slice"]
-	case DATATYPE_PDATA:
+	case DatatypePdata:
 		value = vmap["pdata"]
-	case DATATYPE_PDATA_MAP:
+	case DatatypePdataMap:
 		value = vmap["pdata_map"]
-	case DATATYPE_STRING:
+	case DatatypeString:
 		val, _ := d.String(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_INT:
+	case DatatypeInt:
 		val, _ := d.Int(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_INT64:
+	case DatatypeInt64:
 		val, _ := d.Int64(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_FLOAT:
+	case DatatypeFloat:
 		val, _ := d.Float32(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_FLOAT64:
+	case DatatypeFloat64:
 		val, _ := d.Float64(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_EMAIL:
+	case DatatypeEmail:
 		val, _ := d.Email(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_URL:
+	case DatatypeURL:
 		val, _ := d.Url(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_DATE:
+	case DatatypeDate:
 		val, _ := d.Date(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_TIME:
+	case DatatypeTime:
 		val, _ := d.Time(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_DATETIME:
+	case DatatypeDateTime:
 		val, _ := d.DateTime(arg.LName())
 		value = reflect.ValueOf(val)
-	case DATATYPE_STRUCT, DATATYPE_EMBEDDED:
+	case DatatypeStruct, DatatypeEmbedded:
 		fields := arg.Fields()
 		model := reflect.New(arg.RType())
 		modelval := model.Elem()

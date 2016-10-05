@@ -7,25 +7,25 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type MvcMeta [4]string
+type Meta [4]string
 type VM map[string]interface{}
 
 const (
-	MVC_MODULE int = iota
-	MVC_CONTROLLER
-	MVC_ACTION
-	MVC_TYPE
+	MVCModule int = iota
+	MVCController
+	MVCAction
+	MVCType
 )
 
-func GetMvcMeta(ctxt *web.Context) MvcMeta {
-	m := MvcMeta{
-		MVC_MODULE:     ctxt.Module,
-		MVC_CONTROLLER: ctxt.Controller,
-		MVC_ACTION:     ctxt.Action,
-		MVC_TYPE:       ctxt.Ext,
+func GetMvcMeta(ctxt *web.Context) Meta {
+	m := Meta{
+		MVCModule:     ctxt.Module,
+		MVCController: ctxt.Controller,
+		MVCAction:     ctxt.Action,
+		MVCType:       ctxt.Ext,
 	}
-	if m[MVC_TYPE] == "" || m[MVC_TYPE] == "." {
-		m[MVC_TYPE] = ".html"
+	if m[MVCType] == "" || m[MVCType] == "." {
+		m[MVCType] = ".html"
 	}
 	return m
 }
@@ -48,54 +48,54 @@ func (c *BaseController) Construct_(_ *web.Context) {}
 
 func (c *BaseController) Destruct_() {}
 
-type IdType interface {
+type IDType interface {
 	Base64() string
 	Hex() string
 }
 
-type IdForeign string
+type IDForeign string
 
-func (id IdForeign) Base64() string {
+func (id IDForeign) Base64() string {
 	return base64.URLEncoding.EncodeToString([]byte(id))
 }
 
-func (id IdForeign) MarshalJSON() ([]byte, error) {
+func (id IDForeign) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + id.Base64() + `"`), nil
 }
 
-func (id IdForeign) String() string {
+func (id IDForeign) String() string {
 	return string(id)
 }
 
-func (id IdForeign) ObjectId() bson.ObjectId {
+func (id IDForeign) ObjectId() bson.ObjectId {
 	return bson.ObjectId(id)
 }
 
-func (id IdForeign) Hex() string {
+func (id IDForeign) Hex() string {
 	return bson.ObjectId(id).Hex()
 }
 
-type Id struct {
+type ID struct {
 	bson.ObjectId `bson:"_id"`
 }
 
-func (id Id) String() string {
+func (id ID) String() string {
 	return string(id.ObjectId)
 }
 
-func (id Id) Base64() string {
+func (id ID) Base64() string {
 	return base64.URLEncoding.EncodeToString([]byte(id.ObjectId))
 }
 
-func (id Id) Hex() string {
+func (id ID) Hex() string {
 	return id.ObjectId.Hex()
 }
 
-func (id Id) MarshalJSON() ([]byte, error) {
+func (id ID) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + id.Base64() + `"`), nil
 }
 
-func (id *Id) UnmarshalJSON(b []byte) (err error) {
+func (id *ID) UnmarshalJSON(b []byte) (err error) {
 	if count := len(b); count >= 2 {
 		var dst = make([]byte, count-2)
 		var n int
@@ -107,18 +107,18 @@ func (id *Id) UnmarshalJSON(b []byte) (err error) {
 	return err
 }
 
-func (id Id) IdForeign() IdForeign {
-	return IdForeign(id.ObjectId)
+func (id ID) IDForeign() IDForeign {
+	return IDForeign(id.ObjectId)
 }
 
-func NewId() Id {
-	return Id{bson.NewObjectId()}
+func NewID() ID {
+	return ID{bson.NewObjectId()}
 }
 
-func IdFromBase64(b64 string) Id {
+func IDFromBase64(b64 string) ID {
 	var dst = make([]byte, len(b64))
 	if n, err := base64.URLEncoding.Decode(dst, []byte(b64)); err == nil {
-		return Id{bson.ObjectId(dst[:n])}
+		return ID{bson.ObjectId(dst[:n])}
 	}
-	return Id{}
+	return ID{}
 }

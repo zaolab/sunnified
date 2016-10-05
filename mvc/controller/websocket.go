@@ -29,7 +29,7 @@ func (wc *WebsocketChat) AddChannel(channel string) {
 
 func (wc *WebsocketChat) AddClient(channel, uid string, context *web.Context) {
 	if uid == "" {
-		uid = getUserId(context.Session)
+		uid = getUserID(context.Session)
 	}
 
 	wc.mutex.Lock()
@@ -45,7 +45,7 @@ func (wc *WebsocketChat) AddClient(channel, uid string, context *web.Context) {
 
 func (wc *WebsocketChat) RemoveClient(channel, uid string, context *web.Context) {
 	if uid == "" {
-		uid = getUserId(context.Session)
+		uid = getUserID(context.Session)
 	}
 
 	wc.mutex.Lock()
@@ -163,7 +163,7 @@ func (wc *WebsocketChat) broadcast_(channel string, msgT int, msg interface{}) {
 	}
 }
 
-func getUserId(sess web.SessionManager) string {
+func getUserID(sess web.SessionManager) string {
 	if sess == nil {
 		return ""
 	}
