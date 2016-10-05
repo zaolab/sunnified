@@ -13,9 +13,11 @@ import (
 type GzipResponseWriter struct {
 	http.ResponseWriter
 	gzip *gzip.Writer
+	size int64
 }
 
-func (gw *GzipResponseWriter) Write(data []byte) (n int, err error) {
+func (gw *GzipResponseWriter) Write(data []byte) (int, error) {
+	gw.size += int64(len(data))
 	if gw.gzip != nil {
 		defer gw.gzip.Flush()
 		return gw.gzip.Write(data)
@@ -28,6 +30,10 @@ func (gw *GzipResponseWriter) Close() {
 	if gw.gzip != nil {
 		gw.gzip.Close()
 	}
+}
+
+func (gw *GzipResponseWriter) RawSize() int64 {
+	return gw.size
 }
 
 func NewGzipResponseWriterLevelFile(w http.ResponseWriter, r *http.Request, level int, file *os.File) *GzipResponseWriter {
@@ -47,6 +53,7 @@ func NewGzipResponseWriterLevelFile(w http.ResponseWriter, r *http.Request, leve
 		resp := &GzipResponseWriter{
 			ResponseWriter: w,
 			gzip:           gz,
+			size:           0,
 		}
 
 		header := w.Header()
@@ -58,7 +65,7 @@ func NewGzipResponseWriterLevelFile(w http.ResponseWriter, r *http.Request, leve
 		return resp
 	}
 
-	return &GzipResponseWriter{w, nil}
+	return &GzipResponseWriter{w, nil, 0}
 }
 
 func NewGzipResponseWriterLevel(w http.ResponseWriter, r *http.Request, level int) *GzipResponseWriter {

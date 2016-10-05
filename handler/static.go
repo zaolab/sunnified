@@ -99,8 +99,9 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		clen    = st.Size()
 		modtime = st.ModTime()
 		ext     = path.Ext(fullpath)
-		usegzip = clen > sh.GzipMinSize && ((gzipextl == 0 && sh.GzippedFile) ||
-			(gzipextl > 0 && (sh.Gzip[0] == "*" || validate.IsIn(ext, sh.Gzip...))))
+		usegzip = (clen > sh.GzipMinSize && ((gzipextl == 0 && sh.GzippedFile) ||
+			(gzipextl > 0 && (sh.Gzip[0] == "*" || validate.IsIn(ext, sh.Gzip...))))) &&
+			r.Header.Get("Range") == ""
 		gzpath = fullpath + gzipExt
 	)
 
@@ -157,6 +158,7 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if usegzip {
 		var gzfile *os.File
+		var gzw *resp.GzipResponseWriter
 
 		// serveContent will not write to response if client already has a copy of file making the .gz local file empty
 		if sh.GzippedFile && r.Method != "HEAD" && r.Header.Get("If-Modified-Since") == "" &&
@@ -164,19 +166,23 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			if gzfile, err = os.OpenFile(gzpath+".tmp", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644); err == nil {
 				defer func() {
-					gzfile.Close()
-					os.Remove(gzpath)
-					if err := os.Rename(gzpath+".tmp", gzpath); err != nil {
+					if gzstat, gzerr := gzfile.Stat(); gzerr == nil && gzstat.Size() > 0 &&
+						gzw != nil && gzw.RawSize() == clen {
+
+						gzfile.Close()
+						os.Remove(gzpath)
+						if err := os.Rename(gzpath+".tmp", gzpath); err != nil {
+							os.Remove(gzpath + ".tmp")
+						}
+					} else {
+						gzfile.Close()
 						os.Remove(gzpath + ".tmp")
 					}
 				}()
 			}
 		}
 
-		// TODO: this will probably mess up with clients
-		// who request range since the original size and zipped size is diff
-		// we can jus do our own io.Copy without support for range
-		gzw := resp.NewGzipResponseWriterLevelFile(w, r, gzip.BestSpeed, gzfile)
+		gzw = resp.NewGzipResponseWriterLevelFile(w, r, gzip.BestSpeed, gzfile)
 		defer gzw.Close()
 		w = gzw
 	} else {
