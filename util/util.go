@@ -167,14 +167,14 @@ func CastFloat64(value interface{}) (def float64, err error) {
 	case float64:
 		def = val
 	case string:
-		v, err := strconv.ParseInt(val, 10, 64)
+		v, err := strconv.ParseFloat(val, 64)
 		if err == nil {
-			def = float64(v)
+			def = v
 		}
 	case json.Number:
-		v, err := val.Int64()
+		v, err := val.Float64()
 		if err == nil {
-			def = float64(v)
+			def = v
 		}
 	case int:
 		def = float64(val)
