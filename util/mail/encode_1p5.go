@@ -55,5 +55,5 @@ func (me *MessageEncoder) Bytes() []byte {
 		return me.b.Bytes()
 	}
 
-	return ""
+	return []byte{}
 }

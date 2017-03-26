@@ -43,7 +43,7 @@ func NewSunnyPublisher(p string) *SunnyPublisher {
 		p = DefaultViewPath
 	}
 
-	if plen = len(p); p[plen-1] != "/" {
+	if plen = len(p); p[plen-1] != '/' {
 		p = p + "/"
 		plen++
 	}

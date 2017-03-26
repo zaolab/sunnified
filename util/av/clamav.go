@@ -143,8 +143,8 @@ func (av ClamAVScanner) ScanStream(r io.Reader) (res Result, err error) {
 	return
 }
 
-func (av ClamAVScanner) ScanFileAsync(filename string) (c <-chan ResultErr) {
-	c = make(chan ResultErr, 1)
+func (av ClamAVScanner) ScanFileAsync(filename string) <-chan ResultErr {
+	c := make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanFile(filename)
@@ -157,8 +157,8 @@ func (av ClamAVScanner) ScanFileAsync(filename string) (c <-chan ResultErr) {
 	return c
 }
 
-func (av ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan ResultErr) {
-	c = make(chan ResultErr, 1)
+func (av ClamAVScanner) ScanBytesAsync(d []byte) <-chan ResultErr {
+	c := make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanBytes(d)
@@ -171,8 +171,8 @@ func (av ClamAVScanner) ScanBytesAsync(d []byte) (c <-chan ResultErr) {
 	return c
 }
 
-func (av ClamAVScanner) ScanStreamAsync(r io.Reader) (c <-chan ResultErr) {
-	c = make(chan ResultErr, 1)
+func (av ClamAVScanner) ScanStreamAsync(r io.Reader) <-chan ResultErr {
+	c := make(chan ResultErr, 1)
 
 	go func() {
 		res, err := av.ScanStream(r)
