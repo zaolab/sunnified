@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
-	"os/signal"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -80,6 +80,7 @@ type SunnyApp struct {
 	ctrlhand    *handler.DynamicHandler
 	resources   map[string]func() interface{}
 	mwareresp   []func(*web.Context)
+	listener    net.Listener
 }
 
 func (sk *SunnyApp) Run(params map[string]interface{}) {
@@ -90,7 +91,30 @@ func (sk *SunnyApp) Run(params map[string]interface{}) {
 		laddr = "127.0.0.1:8080"
 	} else {
 		if port, ok := params["port"]; ok {
-			laddr = ":" + port.(string)
+			var p = "80"
+			switch v := port.(type) {
+			case int:
+				if v >= 1 && v <= 65535 {
+					p = strconv.Itoa(v)
+				}
+			case int64:
+				if v >= 1 && v <= 65535 {
+					p = strconv.Itoa(int(v))
+				}
+			case float32:
+				if v >= 1 && v <= 65535 {
+					p = strconv.Itoa(int(v))
+				}
+			case float64:
+				if v >= 1 && v <= 65535 {
+					p = strconv.Itoa(int(v))
+				}
+			case string:
+				if pint, err := strconv.Atoi(v); err == nil && pint >= 1 && pint <= 65535 {
+					p = v
+				}
+			}
+			laddr = ":" + p
 		}
 		if ip, ok := params["ip"]; ok {
 			laddr = ip.(string) + laddr
@@ -101,8 +125,11 @@ func (sk *SunnyApp) Run(params map[string]interface{}) {
 		timeout = tout.(time.Duration)
 	}
 
+	if graceful, ok := params["graceful"]; ok && graceful.(bool) {
+		GracefulShutDown()
+	}
+
 	if fastcgi, ok := params["fcgi"]; ok && fastcgi.(bool) {
-		var listener net.Listener
 		var err error
 
 		if sock, ok := params["sock"]; ok && sock.(bool) {
@@ -110,25 +137,42 @@ func (sk *SunnyApp) Run(params map[string]interface{}) {
 			if sfile, ok := params["sockfile"]; ok {
 				sockfile = sfile.(string)
 			}
-			listener, err = net.Listen("unix", sockfile)
+			if _, err := os.Stat(sockfile); !os.IsNotExist(err) {
+				log.Panicln("Error: socket file already in use. " + sockfile)
+			}
+			sk.listener, err = net.Listen("unix", sockfile)
 			log.Println("Starting SunnyApp (FastCGI) on " + sockfile)
+			GracefulShutDown()
 		} else {
-			listener, err = net.Listen("tcp", laddr)
+			sk.listener, err = net.Listen("tcp", laddr)
 			log.Println("Starting SunnyApp (FastCGI) on " + laddr)
 		}
 
 		if err != nil {
 			log.Panicln(err)
 		}
-		defer listener.Close()
 
-		fcgi.Serve(listener, sk)
+		fcgi.Serve(sk.listener, sk)
 	} else {
 		log.Println("Starting SunnyApp on " + laddr)
 
 		if err := newHTTPServer(laddr, sk, timeout).ListenAndServe(); err != nil {
 			log.Panicln(err)
 		}
+	}
+}
+
+func (sk *SunnyApp) RunWithConfigFile(f string) {
+	var cfg config.Configuration
+	var err error
+	if cfg, err = config.NewConfigurationFromFile(f); err != nil {
+		log.Panicln(err)
+	}
+
+	if serverconf := cfg.Branch("server"); serverconf != nil {
+		sk.Run(serverconf.ToMap())
+	} else {
+		sk.Run(cfg.ToMap())
 	}
 }
 
@@ -402,6 +446,10 @@ func (sk *SunnyApp) Close(callback func()) bool {
 func (sk *SunnyApp) clear() {
 	sk.ev = nil
 	sk.MiddleWares = nil
+	if sk.listener != nil {
+		sk.listener.Close()
+		sk.listener = nil
+	}
 }
 
 func setreqerror(err error, w http.ResponseWriter) {
@@ -444,36 +492,6 @@ func GetSunnyApp(id int) *SunnyApp {
 		return servers[id]
 	}
 	return nil
-}
-
-var graceshut int32
-
-func GracefulShutDown() {
-	if atomic.CompareAndSwapInt32(&graceshut, 0, 1) {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-
-		go func() {
-			<-c
-			mutex.RLock()
-			var serverslen = len(servers)
-			var allservers = make([]*SunnyApp, serverslen)
-			copy(allservers, servers)
-			mutex.RUnlock()
-
-			w := &sync.WaitGroup{}
-			w.Add(serverslen)
-
-			for _, server := range allservers {
-				if !server.Close(func() { w.Done() }) {
-					w.Done()
-				}
-			}
-
-			w.Wait()
-			os.Exit(1)
-		}()
-	}
 }
 
 func removeSunnyApp(id int) {
