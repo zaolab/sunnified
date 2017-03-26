@@ -1,0 +1,30 @@
+{
+  "name": "sunnified",
+  "version": "b",
+  "branch": {
+    "key": "value",
+    "int": 42,
+    "float": 32.12,
+    "bool": true
+  },
+  "switches": {
+    "__switch__": {
+      "__key__": "version",
+      "__default__": "c",
+      "a": {
+        "1": "2",
+        "2": "2"
+      },
+      "b": {
+        "1": "one",
+        "2": "two"
+      },
+      "c": {
+        "1": "ichi",
+        "2": "ni"
+      }
+    },
+    "1": "will be overwritten",
+    "2": 2
+  }
+}

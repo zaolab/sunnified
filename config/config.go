@@ -57,6 +57,8 @@ type Reader interface {
 }
 
 type Writer interface {
+	Parse(map[string]interface{})
+	Update(Configuration)
 	Set(string, interface{}) error
 	MakeBranch(string) (Library, error)
 }
@@ -70,43 +72,46 @@ type Library interface {
 // trigger event calls whenever Set/MakeBranch is called
 type Configuration map[string]interface{}
 
-type ConfigurationSwitch []Library
+func NewConfiguration() Configuration {
+	return make(Configuration)
+}
 
-func NewConfigurationFromFile(file string) (ConfigurationSwitch, error) {
+func NewConfigurationFromMap(m map[string]interface{}) Configuration {
+	c := NewConfiguration()
+	c.Parse(m)
+	return c
+}
+
+func NewConfigurationFromFile(file string) (Configuration, error) {
 	var (
-		c         interface{}
-		cfgswitch ConfigurationSwitch
+		c   interface{}
+		cfg Configuration
+		err error
 	)
 
-	fp, err := os.Open(file)
+	c, err = decodeJSONFile(file)
 
 	if err != nil {
 		return nil, err
 	}
-
-	defer fp.Close()
-
-	jsond := json.NewDecoder(fp)
-	jsond.UseNumber()
-	err = jsond.Decode(&c)
 
 	if err == nil {
 		// TODO: shift namespaces key into their own map
 		// "sunnified.sec" => "sunnified": map[string]interface{"sec": map[string]interface{}}
 		switch conf := c.(type) {
 		case []interface{}:
-			cfgswitch = make(ConfigurationSwitch, len(conf))
+			cfg = NewConfiguration()
 
-			for i, cfg := range conf {
-				m, ok := cfg.(map[string]interface{})
+			for i := range conf {
+				m, ok := conf[i].(map[string]interface{})
 				if ok {
-					cfgswitch[i] = Configuration(m)
+					cfg.Update(NewConfigurationFromMap(m))
 				} else {
 					return nil, ErrConfigFileInvalid
 				}
 			}
 		case map[string]interface{}:
-			cfgswitch = ConfigurationSwitch{Configuration(conf)}
+			cfg = NewConfigurationFromMap(conf)
 		default:
 			return nil, ErrConfigFileInvalid
 		}
@@ -115,11 +120,46 @@ func NewConfigurationFromFile(file string) (ConfigurationSwitch, error) {
 	}
 
 	// func callback fsnotify
-	return cfgswitch, nil
+	return cfg, nil
 }
 
-func (cs ConfigurationSwitch) Update() {
-	// TODO: updates the configuration data whenever config file changes
+func (c Configuration) Parse(m map[string]interface{}) {
+	c.parseInclude(m)
+	c.parseSwitch(nil)
+}
+
+func (c Configuration) Update(cc Configuration) {
+	if cc == nil || reflect.ValueOf(c).Pointer() == reflect.ValueOf(cc).Pointer() {
+		return
+	}
+
+	for k, v := range cc {
+		if m, ok := v.(Configuration); ok {
+			b := c.Branch(k)
+			if b == nil {
+				if newb, err := c.MakeBranch(k); err != nil {
+					c.Set(k, v)
+				} else {
+					newb.Update(Configuration(m))
+				}
+			} else {
+				b.Update(Configuration(m))
+			}
+		} else if m, ok := v.(map[string]interface{}); ok {
+			b := c.Branch(k)
+			if b == nil {
+				if newb, err := c.MakeBranch(k); err != nil {
+					c.Set(k, v)
+				} else {
+					newb.Update(Configuration(m))
+				}
+			} else {
+				b.Update(Configuration(m))
+			}
+		} else {
+			c.Set(k, v)
+		}
+	}
 }
 
 func (c Configuration) Set(name string, value interface{}) (err error) {
@@ -135,29 +175,11 @@ func (c Configuration) Set(name string, value interface{}) (err error) {
 			}
 
 			if err == nil {
-				switch val := value.(type) {
-				case int:
-					value = int64(val)
-				case int8:
-					value = int64(val)
-				case int16:
-					value = int64(val)
-				case int32:
-					value = int64(val)
-				case uint:
-					value = int64(val)
-				case uint8:
-					value = int64(val)
-				case uint16:
-					value = int64(val)
-				case uint32:
-					value = int64(val)
-				case float32:
-					value = float64(val)
-				}
-				cfg.Set(splitname[1], value)
+				cfg.Set(splitname[1], toBigType(value))
 			}
 		}
+	} else {
+		c[name] = toBigType(value)
 	}
 
 	return
@@ -169,25 +191,29 @@ func (c Configuration) MakeBranch(name string) (cfg Library, err error) {
 	if i != nil {
 		if val, ok := i.(map[string]interface{}); ok {
 			cfg = Configuration(val)
+		} else if cfg, ok = i.(Configuration); ok {
+			return
 		} else {
 			err = ErrBranchKeyExists
 		}
-	} else {
-		if strings.Contains(name, ".") {
-			splitname := strings.Split(name, ".")
-			cfg = c
+	} else if strings.Contains(name, ".") {
+		splitname := strings.Split(name, ".")
+		cfg = c
 
-			for i, count := 0, len(splitname); i < count; i++ {
-				tmpcfg := cfg.Branch(splitname[i])
+		for i, count := 0, len(splitname); i < count; i++ {
+			tmpcfg := cfg.Branch(splitname[i])
 
-				if tmpcfg == nil {
-					cfg.Set(splitname[i], make(map[string]interface{}))
-					cfg = Configuration(cfg.Interface(splitname[i]).(map[string]interface{}))
-				} else {
-					cfg = tmpcfg
-				}
+			if tmpcfg == nil {
+				tmpcfg = NewConfiguration()
+				cfg.Set(splitname[i], tmpcfg)
+				cfg = tmpcfg
+			} else {
+				cfg = tmpcfg
 			}
 		}
+	} else {
+		cfg = NewConfiguration()
+		c.Set(name, cfg)
 	}
 
 	return
@@ -205,7 +231,13 @@ func (c Configuration) Branch(name string) Library {
 	}
 
 	if b, exists := c[name]; exists {
-		if cfg, ok := b.(map[string]interface{}); ok {
+		if cc, ok := b.(Configuration); ok {
+			if namesplit != nil {
+				return cc.Branch(namesplit[1])
+			}
+
+			return cc
+		} else if cfg, ok := b.(map[string]interface{}); ok {
 			if namesplit != nil {
 				return Configuration(cfg).Branch(namesplit[1])
 			}
@@ -225,7 +257,8 @@ func (c Configuration) Exists(keys ...string) (exists bool) {
 	exists = true
 
 	for _, key := range keys {
-		if _, exists = c[key]; !exists {
+		cfg, k := c.splitBranchKey(key)
+		if _, exists = cfg[k]; !exists {
 			break
 		}
 	}
@@ -256,14 +289,7 @@ func (c Configuration) Slice(key string, def ...[]interface{}) (res []interface{
 		res = def[0]
 	}
 
-	// TODO: refactor this; Bool(), String(), Byte()
-	toInterface := make([]interface{}, len(def))
-
-	for k, v := range def {
-		toInterface[k] = v
-	}
-
-	if v, ok := c.Interface(key, toInterface...).([]interface{}); ok {
+	if v, ok := c.Interface(key).([]interface{}); ok {
 		res = v
 	}
 
@@ -275,14 +301,19 @@ func (c Configuration) Bool(key string, def ...bool) (res bool) {
 		res = def[0]
 	}
 
-	toInterface := make([]interface{}, len(def))
+	var value = c.Interface(key)
 
-	for k, v := range def {
-		toInterface[k] = v
-	}
-
-	if v, ok := c.Interface(key, toInterface...).(bool); ok {
+	if v, ok := value.(bool); ok {
 		res = v
+	} else if v, ok := value.(string); ok && len(v) > 0 {
+		switch strings.ToLower(strings.TrimSpace(v)) {
+		case "true", "t", "yes", "y", "1":
+			res = true
+		case "false", "f", "no", "n", "0":
+			res = false
+		}
+	} else if v := c.Int64(key, -1); v == 1 || v == 0 {
+		res = v == 1
 	}
 
 	return
@@ -293,7 +324,11 @@ func (c Configuration) BoolSlice(key string, def ...[]bool) (res []bool) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
+	var value = c.Interface(key)
+
+	if v, ok := value.([]bool); ok {
+		res = v
+	} else if v, ok := value.([]interface{}); ok {
 		sl := make([]bool, len(v))
 
 		var ok bool
@@ -314,13 +349,7 @@ func (c Configuration) String(key string, def ...string) (res string) {
 		res = def[0]
 	}
 
-	toInterface := make([]interface{}, len(def))
-
-	for k, v := range def {
-		toInterface[k] = v
-	}
-
-	val := c.Interface(key, toInterface...)
+	val := c.Interface(key)
 	if v, ok := val.(string); ok {
 		res = v
 	} else if v, ok := val.(fmt.Stringer); ok {
@@ -335,7 +364,11 @@ func (c Configuration) StringSlice(key string, def ...[]string) (res []string) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
+	var value = c.Interface(key)
+
+	if v, ok := value.([]string); ok {
+		res = v
+	} else if v, ok := value.([]interface{}); ok {
 		sl := make([]string, len(v))
 
 		var ok bool
@@ -360,13 +393,7 @@ func (c Configuration) Byte(key string, def ...byte) (res byte) {
 		res = def[0]
 	}
 
-	toInterface := make([]interface{}, len(def))
-
-	for k, v := range def {
-		toInterface[k] = v
-	}
-
-	if v, ok := c.Interface(key, toInterface...).(byte); ok {
+	if v, ok := c.Interface(key).(byte); ok {
 		res = v
 	}
 
@@ -378,7 +405,11 @@ func (c Configuration) ByteSlice(key string, def ...[]byte) (res []byte) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
+	var value = c.Interface(key)
+
+	if v, ok := value.([]byte); ok {
+		res = v
+	} else if v, ok := value.([]interface{}); ok {
 		sl := make([]byte, len(v))
 
 		var ok bool
@@ -395,12 +426,10 @@ func (c Configuration) ByteSlice(key string, def ...[]byte) (res []byte) {
 }
 
 func (c Configuration) Bytes(key string, def ...[]byte) (res []byte) {
-	if len(def) > 0 {
-		res = def[0]
-	}
-
 	if v, ok := c.Interface(key, def).(string); ok {
 		res = []byte(v)
+	} else {
+		res = c.ByteSlice(key, def...)
 	}
 
 	return
@@ -411,11 +440,17 @@ func (c Configuration) BytesSlice(key string, def ...[][]byte) (res [][]byte) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
+	var value = c.Interface(key)
+
+	if v, ok := value.([][]byte); ok {
+		res = v
+	} else if v, ok := value.([]interface{}); ok {
 		sl := make([][]byte, len(v))
 
 		for i, val := range v {
-			if tstring, ok := val.(string); ok {
+			if tbytes, ok := val.([]byte); ok {
+				sl[i] = tbytes
+			} else if tstring, ok := val.(string); ok {
 				sl[i] = []byte(tstring)
 			} else {
 				return
@@ -442,14 +477,25 @@ func (c Configuration) IntSlice(key string, def ...[]int) (res []int) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]int, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tint64, err := util.CastInt64(val); err == nil {
-				sl[i] = int(tint64)
+	if v, ok := value.([]int); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]int, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = int(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = int(iv.Int())
 			} else {
-				return
+				sl[i] = int(iv.Uint())
 			}
 		}
 
@@ -472,14 +518,25 @@ func (c Configuration) Int8Slice(key string, def ...[]int8) (res []int8) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]int8, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tint64, err := util.CastInt64(val); err == nil {
-				sl[i] = int8(tint64)
+	if v, ok := value.([]int8); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]int8, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = int8(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = int8(iv.Int())
 			} else {
-				return
+				sl[i] = int8(iv.Uint())
 			}
 		}
 
@@ -502,14 +559,25 @@ func (c Configuration) Int16Slice(key string, def ...[]int16) (res []int16) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]int16, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tint64, err := util.CastInt64(val); err == nil {
-				sl[i] = int16(tint64)
+	if v, ok := value.([]int16); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]int16, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = int16(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = int16(iv.Int())
 			} else {
-				return
+				sl[i] = int16(iv.Uint())
 			}
 		}
 
@@ -532,14 +600,25 @@ func (c Configuration) Int32Slice(key string, def ...[]int32) (res []int32) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]int32, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tint64, err := util.CastInt64(val); err == nil {
-				sl[i] = int32(tint64)
+	if v, ok := value.([]int32); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]int32, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = int32(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = int32(iv.Int())
 			} else {
-				return
+				sl[i] = int32(iv.Uint())
 			}
 		}
 
@@ -566,13 +645,25 @@ func (c Configuration) Int64Slice(key string, def ...[]int64) (res []int64) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]int64, len(v))
+	var value = c.Interface(key)
 
-		var err error
-		for i, val := range v {
-			if sl[i], err = util.CastInt64(val); err != nil {
-				return
+	if v, ok := value.([]int64); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]int64, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = int64(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = int64(iv.Int())
+			} else {
+				sl[i] = int64(iv.Uint())
 			}
 		}
 
@@ -595,14 +686,25 @@ func (c Configuration) UintSlice(key string, def ...[]uint) (res []uint) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]uint, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tuint64, err := util.CastUint64(val); err == nil {
-				sl[i] = uint(tuint64)
+	if v, ok := value.([]uint); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]uint, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = uint(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = uint(iv.Int())
 			} else {
-				return
+				sl[i] = uint(iv.Uint())
 			}
 		}
 
@@ -625,14 +727,25 @@ func (c Configuration) Uint8Slice(key string, def ...[]uint8) (res []uint8) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]uint8, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tuint64, err := util.CastUint64(val); err == nil {
-				sl[i] = uint8(tuint64)
+	if v, ok := value.([]uint8); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]uint8, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = uint8(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = uint8(iv.Int())
 			} else {
-				return
+				sl[i] = uint8(iv.Uint())
 			}
 		}
 
@@ -655,14 +768,25 @@ func (c Configuration) Uint16Slice(key string, def ...[]uint16) (res []uint16) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]uint16, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tuint64, err := util.CastUint64(val); err == nil {
-				sl[i] = uint16(tuint64)
+	if v, ok := value.([]uint16); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]uint16, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = uint16(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = uint16(iv.Int())
 			} else {
-				return
+				sl[i] = uint16(iv.Uint())
 			}
 		}
 
@@ -685,14 +809,25 @@ func (c Configuration) Uint32Slice(key string, def ...[]uint32) (res []uint32) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]uint32, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tuint64, err := util.CastUint64(val); err == nil {
-				sl[i] = uint32(tuint64)
+	if v, ok := value.([]uint32); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]uint32, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = uint32(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = uint32(iv.Int())
 			} else {
-				return
+				sl[i] = uint32(iv.Uint())
 			}
 		}
 
@@ -720,13 +855,25 @@ func (c Configuration) Uint64Slice(key string, def ...[]uint64) (res []uint64) {
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]uint64, len(v))
+	var value = c.Interface(key)
 
-		var err error
-		for i, val := range v {
-			if sl[i], err = util.CastUint64(val); err != nil {
-				return
+	if v, ok := value.([]uint64); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]uint64, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = uint64(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = uint64(iv.Int())
+			} else {
+				sl[i] = uint64(iv.Uint())
 			}
 		}
 
@@ -749,14 +896,25 @@ func (c Configuration) Float32Slice(key string, def ...[]float32) (res []float32
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]float32, len(v))
+	var value = c.Interface(key)
 
-		for i, val := range v {
-			if tfloat64, err := util.CastFloat64(val); err == nil {
-				sl[i] = float32(tfloat64)
+	if v, ok := value.([]float32); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]float32, vv.Len())
+
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = float32(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = float32(iv.Int())
 			} else {
-				return
+				sl[i] = float32(iv.Uint())
 			}
 		}
 
@@ -783,13 +941,24 @@ func (c Configuration) Float64Slice(key string, def ...[]float64) (res []float64
 		res = def[0]
 	}
 
-	if v := c.Slice(key, nil); v != nil {
-		sl := make([]float64, len(v))
+	var value = c.Interface(key)
 
-		var err error
-		for i, val := range v {
-			if sl[i], err = util.CastFloat64(val); err != nil {
-				return
+	if v, ok := value.([]float64); ok {
+		res = v
+	} else if vv := reflect.ValueOf(value); vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
+		sl := make([]float64, vv.Len())
+		defer func() { recover() }()
+
+		for i := range sl {
+			iv := vv.Index(i)
+			if k := iv.Kind(); k == reflect.Float32 || k == reflect.Float64 {
+				sl[i] = float64(iv.Float())
+			} else if k == reflect.Int || k == reflect.Int8 || k == reflect.Int16 ||
+				k == reflect.Int32 || k == reflect.Int64 {
+
+				sl[i] = float64(iv.Int())
+			} else {
+				sl[i] = float64(iv.Uint())
 			}
 		}
 
@@ -823,6 +992,142 @@ func (c Configuration) LoadConfigStruct(st interface{}) interface{} {
 	}
 
 	return val.Interface()
+}
+
+func (c Configuration) parseInclude(m map[string]interface{}) {
+	for k, v := range m {
+		if mval, ok := v.(map[string]interface{}); ok && k != "__switch__" {
+			cfg := NewConfiguration()
+			cfg.parseInclude(mval)
+			c.Set(k, cfg)
+		} else if k != "__include__" {
+			c.Set(k, v)
+		}
+	}
+
+	if inc, ok := m["__include__"]; ok {
+		switch v := inc.(type) {
+		case string:
+			js, err := decodeJSONFile(v)
+			if err != nil {
+				break
+			}
+			c.Update(parseJSONToConfiguration(js))
+		case []interface{}:
+			for i := range v {
+				if fname, ok := v[i].(string); ok {
+					js, err := decodeJSONFile(fname)
+					if err != nil {
+						continue
+					}
+					c.Update(parseJSONToConfiguration(js))
+				}
+			}
+		case []string:
+			for i := range v {
+				js, err := decodeJSONFile(v[i])
+				if err != nil {
+					continue
+				}
+				c.Update(parseJSONToConfiguration(js))
+			}
+		}
+	}
+}
+
+func (c Configuration) parseSwitch(cc Configuration) {
+	if cc == nil {
+		cc = c
+	}
+
+	if v, ok := cc["__switch__"]; ok {
+		if m2, ok := v.(map[string]interface{}); ok {
+			v = Configuration(m2)
+		}
+		if m2, ok := v.(Configuration); !ok {
+			goto switchcleanup
+		} else if key, ok := m2["__key__"]; !ok {
+			goto switchcleanup
+		} else if s, ok := key.(string); ok {
+			selected := c.String(s, "")
+			if selected == "" {
+				if def, ok := m2["__default__"]; ok {
+					selected, _ = def.(string)
+				}
+			}
+
+			if caseVal, ok := m2[selected]; ok {
+				if cfg, ok := caseVal.(Configuration); ok {
+					cc.Update(cfg)
+				} else if cfg, ok := caseVal.(map[string]interface{}); ok {
+					cc.Update(Configuration(cfg))
+				}
+			}
+		}
+
+	switchcleanup:
+		delete(cc, "__switch__")
+	}
+
+	for _, v := range cc {
+		if cfg, ok := v.(Configuration); ok {
+			c.parseSwitch(cfg)
+		}
+	}
+}
+
+func (c Configuration) splitBranchKey(key string) (Configuration, string) {
+	var keysplit []string
+	var ok bool
+	var cfg = c
+
+	if strings.Contains(key, ".") {
+		keysplit = util.StringSplitLastN(key, ".", 2)
+
+		if cfg, ok = c.Branch(keysplit[0]).(Configuration); !ok || cfg == nil {
+			return nil, ""
+		}
+
+		key = keysplit[1]
+	}
+
+	return cfg, key
+}
+
+func decodeJSONFile(fname string) (interface{}, error) {
+	var c interface{}
+	fp, err := os.Open(fname)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer fp.Close()
+
+	jsond := json.NewDecoder(fp)
+	err = jsond.Decode(&c)
+
+	return c, nil
+}
+
+func parseJSONToConfiguration(js interface{}) (cfg Configuration) {
+	switch conf := js.(type) {
+	case []interface{}:
+		cfg = NewConfiguration()
+
+		for i := range conf {
+			if m, ok := conf[i].(map[string]interface{}); ok {
+				cc := NewConfiguration()
+				cc.parseInclude(m)
+				cfg.Update(cc)
+			}
+		}
+	case map[string]interface{}:
+		cfg = NewConfiguration()
+		cfg.parseInclude(conf)
+	}
+
+	return
 }
 
 func setStructConfig(cfg Library, val reflect.Value, valtype reflect.Type) reflect.Value {
@@ -877,19 +1182,24 @@ func setStructConfig(cfg Library, val reflect.Value, valtype reflect.Type) refle
 	return val
 }
 
-func (c Configuration) splitBranchKey(key string) (Configuration, string) {
-	var keysplit []string
-	var cfg = c
-
-	if strings.Contains(key, ".") {
-		keysplit = util.StringSplitLastN(key, ".", 2)
-
-		if cfg = c.Branch(keysplit[0]).(Configuration); cfg == nil {
-			return nil, ""
-		}
-
-		key = keysplit[1]
+func toBigType(v interface{}) interface{} {
+	switch val := v.(type) {
+	case int:
+		v = int64(val)
+	case int8:
+		v = int64(val)
+	case int16:
+		v = int64(val)
+	case int32:
+		v = int64(val)
+	case uint:
+		v = uint64(val)
+	case uint16:
+		v = uint64(val)
+	case uint32:
+		v = uint64(val)
+	case float32:
+		v = float64(val)
 	}
-
-	return cfg, key
+	return v
 }

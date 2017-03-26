@@ -1,0 +1,7 @@
+{
+  "env": "prod",
+  "app": {
+    "db_username": "appuser",
+    "db_password": "apppass"
+  }
+}

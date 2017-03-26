@@ -1,0 +1,19 @@
+{
+  "__include__": "test_a.json",
+  "name": "sunnified",
+  "version": "a",
+  "app": {
+    "__switch__": {
+      "dev": {
+        "ssl": false,
+        "domain": "localhost",
+        "port": 8080
+      },
+      "prod": {
+        "ssl": true,
+        "domain": "www.myapp.com",
+        "port": 80
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "__include__": ["test_b.json", "test_c.json"],
+  "name": "sunny",
+  "app": {
+    "__switch__": {
+      "__key__": "env",
+      "__default__": "dev",
+      "dev": {
+        "db_database": "mydb"
+      },
+      "prod": {
+        "db_database": "myapp"
+      }
+    }
+  }
+}
