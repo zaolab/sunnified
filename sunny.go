@@ -169,6 +169,8 @@ func (sk *SunnyApp) RunWithConfigFile(f string) {
 		log.Panicln(err)
 	}
 
+	sk.AddResourceFunc("sunnyconfig", func() interface{} { return cfg })
+
 	if serverconf := cfg.Branch("server"); serverconf != nil {
 		sk.Run(serverconf.ToMap())
 	} else {
