@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -20,12 +21,12 @@ const (
 	//dCSRFToken			= "\xc7\x58\xa7\xf2\x15\x79\x54\x34\x24\xeb\x45\x50\x33\x0f\xa5\x52\x95\x36\x06\xb0\xb7\xdb\x5d\xa7\x07\xcf\xa5\x1c\x10\xe7\x4b\xd4"
 	//dHashSalt			= "\x5d\xfb\xcf\x47\x30\xce\x2e\x43\xfa\x1c\x5f\xee\x76\x0f\xd7\x31\x14\x07\x24\xa8\xbf\xd0\x3c\x88\xfc\xa3\xdc\x3b\xae\xaa\x3a\x15"
 	//dCSRFTokenLife		= 14400
-	CSRFTokenMinLife = 3600
-	CSRFDefaultTokenLife = 14400
-	CSRFDefaultCookieName = "XSRF-TOKEN"
+	CSRFTokenMinLife       = 3600
+	CSRFDefaultTokenLife   = 14400
+	CSRFDefaultCookieName  = "XSRF-TOKEN"
 	CSRFDefaultRequestName = "X-XSRF-TOKEN"
-	CSRFTimestampLen = 5
-	CSRFRandTokenLen = 16
+	CSRFTimestampLen       = 5
+	CSRFRandTokenLen       = 16
 )
 
 // the resultant hash length should be longer than or equals to sessEntropy
@@ -127,7 +128,7 @@ func (cg *CSRFGate) CSRFToken(w http.ResponseWriter, r *http.Request) (crb CSRFR
 		writeCookie = true
 	}
 
-	msg = make([]byte, 0, CSRFTimestampLen + CSRFRandTokenLen +len(currentToken))
+	msg = make([]byte, 0, CSRFTimestampLen+CSRFRandTokenLen+len(currentToken))
 	buf := bytes.NewBuffer(msg)
 	binary.Write(buf, binary.LittleEndian, tstamp)
 
@@ -186,7 +187,7 @@ func (cg *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 
 		result, err := AesCtrDecryptBase64(cg.config.Key, token)
 
-		if err != nil || len(result) <= (CSRFTimestampLen + CSRFRandTokenLen) {
+		if err != nil || len(result) <= (CSRFTimestampLen+CSRFRandTokenLen) {
 			return
 		}
 
@@ -207,7 +208,7 @@ func (cg *CSRFGate) VerifyCSRFToken(r *http.Request) (valid bool) {
 		copy(reqtoken, result[lenTNC:])
 
 		if CSRFTimestampLen < 8 {
-			filler := make([]byte, 8- CSRFTimestampLen)
+			filler := make([]byte, 8-CSRFTimestampLen)
 			tcreated = append(tcreated, filler...)
 		}
 
@@ -313,11 +314,24 @@ func GenRandomHexString(l int) string {
 	return hex.EncodeToString(GenRandomBytes(l))
 }
 
-func GenSessionID() string {
+func genSessionID(l ...int) []byte {
+	var size = sessEnthropy
+	if len(l) > 0 && l[0] > 0 && l[0] < 1035 {
+		size = l[0]
+	}
+
 	var h = sessHash()
-	h.Write(GenRandomBytes(sessEnthropy))
+	h.Write(GenRandomBytes(size))
 	h.Write([]byte(strconv.FormatInt(time.Now().Unix(), 10)))
 	id := make([]byte, 0, h.Size())
 	id = h.Sum(id)
-	return base64.StdEncoding.EncodeToString(id)
+	return id
+}
+
+func GenSessionID(l ...int) string {
+	return base64.StdEncoding.EncodeToString(genSessionID(l...))
+}
+
+func GenSessionIDBase32(l ...int) string {
+	return base32.StdEncoding.EncodeToString(genSessionID(l...))
 }
