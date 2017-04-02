@@ -142,8 +142,12 @@ func SQLInsert(db *sql.DB, table string, m interface{}) (sql.Result, error) {
 			if fname == "" {
 				fname = strings.ToLower(field.Name)
 			}
+			iface := v.Field(i).Interface()
+			if t, ok := iface.(time.Time); ok && t.IsZero() {
+				continue
+			}
 			fields = append(fields, fname)
-			values = append(values, v.Field(i).Interface())
+			values = append(values, iface)
 			valuesholder = append(valuesholder, "?")
 		}
 	}
