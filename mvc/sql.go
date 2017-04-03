@@ -35,6 +35,8 @@ type SQLID string
 func (id *SQLID) Scan(value interface{}) error {
 	if s, ok := value.(string); ok {
 		*id = SQLID(s)
+	} else if b, ok := value.([]byte); ok {
+		*id = SQLID(b)
 	} else {
 		*id = ""
 	}
@@ -159,7 +161,7 @@ func SQLInsert(db *sql.DB, table string, m interface{}) (sql.Result, error) {
 		strings.Join(fields, "`,`"),
 		strings.Join(valuesholder, ","))
 
-	if query, err = db.Prepare(stmt); err != nil {
+	if query, err = db.Prepare(stmt); err == nil {
 		return query.Exec(values...)
 	}
 
