@@ -5,15 +5,17 @@ import (
 	"errors"
 )
 
+type UserDetailGenerator func() (user, pass, email string)
+
 type SQLScheme interface {
 	Version() int
 	Previous() SQLScheme
-	CreateAdmin(user, pass, email string) (string, []interface{})
+	CreateAdmin(UserDetailGenerator) (string, []interface{})
 	Slice() []string
 	UpdateVersion() string
 }
 
-func Migrate(s SQLScheme, db *sql.DB, v int, user, pass, email string) error {
+func Migrate(s SQLScheme, db *sql.DB, v int, usrgen UserDetailGenerator) error {
 	if s.Version() == v {
 		return nil
 	} else if s.Version() < v {
@@ -21,7 +23,7 @@ func Migrate(s SQLScheme, db *sql.DB, v int, user, pass, email string) error {
 	}
 
 	if scheme := s.Previous(); scheme != nil {
-		if err := Migrate(scheme, db, v, user, pass, email); err != nil {
+		if err := Migrate(scheme, db, v, usrgen); err != nil {
 			return err
 		}
 	}
@@ -32,8 +34,8 @@ func Migrate(s SQLScheme, db *sql.DB, v int, user, pass, email string) error {
 		}
 	}
 
-	if user != "" {
-		if adm, i := s.CreateAdmin(user, pass, email); adm != "" {
+	if usrgen != nil {
+		if adm, i := s.CreateAdmin(usrgen); adm != "" {
 			if _, err := db.Exec(adm, i...); err != nil {
 				return err
 			}
