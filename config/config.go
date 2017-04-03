@@ -983,11 +983,15 @@ func (c Configuration) LoadConfigStruct(st interface{}) interface{} {
 	val := reflect.ValueOf(st)
 	valtype := val.Type()
 
+	if valtype.Kind() == reflect.Ptr {
+		valtype = val.Elem().Type()
+	}
+
 	if scfg, ok := valtype.FieldByName("SunnyConfig"); ok {
 		cfg := c.Branch(scfg.Tag.Get("config.namespace"))
 
 		if cfg != nil {
-			val = setStructConfig(cfg, val, valtype)
+			val = setStructConfig(cfg, val, val.Type())
 		}
 	}
 

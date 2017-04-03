@@ -122,7 +122,10 @@ func SQLInsert(db *sql.DB, table string, m interface{}) (sql.Result, error) {
 
 	var v reflect.Value
 
-	if v = reflect.ValueOf(m); v.Kind() != reflect.Struct {
+	if v = reflect.ValueOf(m); v.Type().Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Type().Kind() != reflect.Struct {
 		return nil, nil
 	}
 
