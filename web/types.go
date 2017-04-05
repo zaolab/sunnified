@@ -200,7 +200,7 @@ func (data PData) URL(key string) (s string, err error) {
 func (data PData) Date(key string) (d time.Time, err error) {
 	var s string
 	if s, err = data.String(key); err == nil {
-		d, err = time.Parse("2013-02-13", s)
+		d, err = time.Parse("2006-01-02", s)
 	}
 	return
 }
@@ -229,7 +229,7 @@ func (data PData) DateTime(key string) (dt time.Time, err error) {
 	var s string
 
 	if s, err = data.String(key); err == nil {
-		dt, err = time.Parse("2013-02-13T03:04:05+0000", s)
+		dt, err = time.Parse("2006-01-02T15:04:05.999999999Z07:00", s)
 	}
 
 	return
