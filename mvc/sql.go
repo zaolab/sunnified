@@ -30,6 +30,11 @@ func init() {
 	osPID[1] = byte(pid)
 }
 
+type SQLExecutor interface {
+	Prepare(query string) (*sql.Stmt, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 type SQLID string
 
 func (id *SQLID) Scan(value interface{}) error {
@@ -117,7 +122,7 @@ func IsSQLID(id string) bool {
 	return len(id) == 24
 }
 
-func SQLInsert(db *sql.DB, table string, m interface{}) (sql.Result, error) {
+func SQLInsert(db SQLExecutor, table string, m interface{}) (sql.Result, error) {
 	if m == nil {
 		return nil, nil
 	}
