@@ -83,6 +83,39 @@ func (ns SQLNullID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+type SQLNullInt64 struct {
+	sql.NullInt64
+}
+
+func (ns SQLNullInt64) MarshalJSON() ([]byte, error) {
+	if ns.Valid {
+		return json.Marshal(ns.Int64)
+	}
+	return json.Marshal(nil)
+}
+
+type SQLNullFloat64 struct {
+	sql.NullFloat64
+}
+
+func (ns SQLNullFloat64) MarshalJSON() ([]byte, error) {
+	if ns.Valid {
+		return json.Marshal(ns.Float64)
+	}
+	return json.Marshal(nil)
+}
+
+type SQLNullBool struct {
+	sql.NullBool
+}
+
+func (ns SQLNullBool) MarshalJSON() ([]byte, error) {
+	if ns.Valid {
+		return json.Marshal(ns.Bool)
+	}
+	return json.Marshal(nil)
+}
+
 func NewSQLID() SQLID {
 	var b [15]byte
 	binary.BigEndian.PutUint32(b[:], uint32(time.Now().Unix()))
