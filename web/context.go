@@ -779,6 +779,12 @@ func makeRequestData(k string, c map[string]interface{}, f url.Values) {
 
 	for _k, _v := range c {
 		key := k + _k
+
+		if _v == nil {
+			f.Add(key, "")
+			continue
+		}
+
 		switch _s := _v.(type) {
 		case []interface{}:
 			for i, v := range _s {
