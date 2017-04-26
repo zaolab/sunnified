@@ -155,7 +155,7 @@ func IsSQLID(id string) bool {
 	return len(id) == 24
 }
 
-func SQLInsert(db SQLExecutor, table string, m interface{}) (sql.Result, error) {
+func SQLInsert(db SQLExecutor, table string, m interface{}, quoteChar ...string) (sql.Result, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -175,9 +175,14 @@ func SQLInsert(db SQLExecutor, table string, m interface{}) (sql.Result, error) 
 		fields       = make([]string, 0, l)
 		values       = make([]interface{}, 0, l)
 		valuesholder = make([]string, 0, l)
+		qChar        = ""
 		query        *sql.Stmt
 		err          error
 	)
+
+	if len(quoteChar) > 0 {
+		qChar = quoteChar[0]
+	}
 
 	for i := 0; i < l; i++ {
 		if field := t.Field(i); field.PkgPath == "" {
@@ -194,14 +199,39 @@ func SQLInsert(db SQLExecutor, table string, m interface{}) (sql.Result, error) 
 			valuesholder = append(valuesholder, "?")
 		}
 	}
-	stmt := fmt.Sprintf("INSERT INTO `%s`(`%s`) VALUES(%s)",
+	stmt := fmt.Sprintf("INSERT INTO %s%s%s(%s%s%s) VALUES(%s)",
+		qChar,
 		table,
-		strings.Join(fields, "`,`"),
+		qChar,
+		qChar,
+		strings.Join(fields, fmt.Sprintf("%s,%s", qChar, qChar)),
+		qChar,
 		strings.Join(valuesholder, ","))
 
 	if query, err = db.Prepare(stmt); err == nil {
+		defer query.Close()
 		return query.Exec(values...)
 	}
 
 	return nil, err
+}
+
+func SQLMultiInsert(db SQLExecutor, table string, models ...interface{}) (res []sql.Result) {
+	var qChar []string
+
+	if l := len(models); l > 0 {
+		if s, ok := models[l-1].(string); ok {
+			qChar = []string{s}
+			models = models[0 : l-1]
+			l--
+		}
+		res = make([]sql.Result, 0, l)
+	}
+
+	for _, m := range models {
+		r, _ := SQLInsert(db, table, m, qChar...)
+		res = append(res, r)
+	}
+
+	return
 }
