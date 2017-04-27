@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
+	"net/http/httptest"
 	"os"
 	"strconv"
 	"sync"
@@ -176,6 +177,22 @@ func (sk *SunnyApp) RunWithConfigFile(f string) {
 	} else {
 		sk.Run(cfg.ToMap())
 	}
+}
+
+func (sk *SunnyApp) Test() *httptest.Server {
+	return httptest.NewServer(sk)
+}
+
+func (sk *SunnyApp) TestWithConfigFile(f string) *httptest.Server {
+	var cfg config.Configuration
+	var err error
+	if cfg, err = config.NewConfigurationFromFile(f); err != nil {
+		log.Panicln(err)
+	}
+
+	sk.AddResourceFunc("sunnyconfig", func() interface{} { return cfg })
+
+	return sk.Test()
 }
 
 func (sk *SunnyApp) ID() int {
