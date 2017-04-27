@@ -602,3 +602,193 @@ func TestConfigInclude(t *testing.T) {
 		t.Error("Expected value and result does not match")
 	}
 }
+
+func TestRelativePathInclude(t *testing.T) {
+	c, err := NewConfigurationFromFile("test/test_dir.json")
+	if err != nil {
+		t.Error("File failed", err)
+	}
+	if !c.Exists("name", "version", "branch", "branch.key", "switches", "switches.1", "switches.2",
+		"app.db_username", "app.db_password", "app.db_database") {
+		t.Error("Keys do not exists")
+	} else if c.Exists("switches.__switch__") {
+		t.Error("Switch still exists")
+	} else if c.Exists("app.__switch__") {
+		t.Error("Switch still exists")
+	}
+
+	if c.String("version") != "b" {
+		t.Log("Key: version")
+		t.Log("Expected: b")
+		t.Log("Result:", c.String("version"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("branch.key") != "value" {
+		t.Log("Key: branch.key")
+		t.Log("Expected: value")
+		t.Log("Result:", c.String("branch.key"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.Int("branch.int") != 42 {
+		t.Log("Key: branch.int")
+		t.Log("Expected: 42")
+		t.Log("Result:", c.Int("branch.int"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.Float64("branch.float") != 32.12 {
+		t.Log("Key: branch.float")
+		t.Log("Expected: 32.12")
+		t.Log("Result:", c.Float64("branch.float"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.Bool("branch.bool") != true {
+		t.Log("Key: branch.bool")
+		t.Log("Expected: true")
+		t.Log("Result:", c.Bool("branch.bool"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("switches.1") != "one" {
+		t.Log("Key: switches.1")
+		t.Log("Expected: one")
+		t.Log("Result:", c.String("switches.1"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("switches.2") != "two" {
+		t.Log("Key: switches.2")
+		t.Log("Expected: two")
+		t.Log("Result:", c.String("switches.2"))
+		t.Error("Expected value and result does not match")
+	}
+
+	if c.String("app.db_database") != "myapp" {
+		t.Log("Key: app.db_database")
+		t.Log("Expected: myapp")
+		t.Log("Result:", c.String("app.db_database"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("app.db_username") != "appuser" {
+		t.Log("Key: app.db_username")
+		t.Log("Expected: appuser")
+		t.Log("Result:", c.String("app.db_username"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("app.db_password") != "apppass" {
+		t.Log("Key: app.db_password")
+		t.Log("Expected: apppass")
+		t.Log("Result:", c.String("app.db_password"))
+		t.Error("Expected value and result does not match")
+	}
+
+	if c.Bool("app.ssl") != true {
+		t.Log("Key: app.ssl")
+		t.Log("Expected: true")
+		t.Log("Result:", c.Bool("app.ssl"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.String("app.domain") != "www.myapp.com" {
+		t.Log("Key: app.domain")
+		t.Log("Expected: www.myapp.com")
+		t.Log("Result:", c.String("app.domain"))
+		t.Error("Expected value and result does not match")
+	}
+	if c.Int("app.port") != 80 {
+		t.Log("Key: app.port")
+		t.Log("Expected: 80")
+		t.Log("Result:", c.Int("app.port"))
+		t.Error("Expected value and result does not match")
+	}
+
+	c2, err := NewConfigurationFromFile("test_e.json")
+	if err != nil {
+		t.Error("File failed", err)
+	}
+	if !c2.Exists("name", "version", "branch", "branch.key", "switches", "switches.1", "switches.2",
+		"app.db_username", "app.db_password", "app.db_database") {
+		t.Error("Keys do not exists")
+	} else if c2.Exists("switches.__switch__") {
+		t.Error("Switch still exists")
+	} else if c2.Exists("app.__switch__") {
+		t.Error("Switch still exists")
+	}
+
+	if c2.String("version") != "b" {
+		t.Log("Key: version")
+		t.Log("Expected: b")
+		t.Log("Result:", c2.String("version"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("branch.key") != "value" {
+		t.Log("Key: branch.key")
+		t.Log("Expected: value")
+		t.Log("Result:", c2.String("branch.key"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.Int("branch.int") != 42 {
+		t.Log("Key: branch.int")
+		t.Log("Expected: 42")
+		t.Log("Result:", c2.Int("branch.int"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.Float64("branch.float") != 32.12 {
+		t.Log("Key: branch.float")
+		t.Log("Expected: 32.12")
+		t.Log("Result:", c2.Float64("branch.float"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.Bool("branch.bool") != true {
+		t.Log("Key: branch.bool")
+		t.Log("Expected: true")
+		t.Log("Result:", c2.Bool("branch.bool"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("switches.1") != "one" {
+		t.Log("Key: switches.1")
+		t.Log("Expected: one")
+		t.Log("Result:", c2.String("switches.1"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("switches.2") != "two" {
+		t.Log("Key: switches.2")
+		t.Log("Expected: two")
+		t.Log("Result:", c2.String("switches.2"))
+		t.Error("Expected value and result does not match")
+	}
+
+	if c2.String("app.db_database") != "myapp" {
+		t.Log("Key: app.db_database")
+		t.Log("Expected: myapp")
+		t.Log("Result:", c2.String("app.db_database"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("app.db_username") != "appuser" {
+		t.Log("Key: app.db_username")
+		t.Log("Expected: appuser")
+		t.Log("Result:", c2.String("app.db_username"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("app.db_password") != "apppass" {
+		t.Log("Key: app.db_password")
+		t.Log("Expected: apppass")
+		t.Log("Result:", c2.String("app.db_password"))
+		t.Error("Expected value and result does not match")
+	}
+
+	if c2.Bool("app.ssl") != true {
+		t.Log("Key: app.ssl")
+		t.Log("Expected: true")
+		t.Log("Result:", c2.Bool("app.ssl"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.String("app.domain") != "www.myapp.com" {
+		t.Log("Key: app.domain")
+		t.Log("Expected: www.myapp.com")
+		t.Log("Result:", c2.String("app.domain"))
+		t.Error("Expected value and result does not match")
+	}
+	if c2.Int("app.port") != 80 {
+		t.Log("Key: app.port")
+		t.Log("Expected: 80")
+		t.Log("Result:", c2.Int("app.port"))
+		t.Error("Expected value and result does not match")
+	}
+}

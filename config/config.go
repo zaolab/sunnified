@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/zaolab/sunnified/util"
+	"path/filepath"
 )
 
 var ErrConfigFileInvalid = errors.New("configuration file given is invalid")
@@ -57,7 +58,7 @@ type Reader interface {
 }
 
 type Writer interface {
-	Parse(map[string]interface{})
+	Parse(map[string]interface{}, ...string)
 	Update(Configuration)
 	Set(string, interface{}) error
 	MakeBranch(string) (Library, error)
@@ -76,9 +77,9 @@ func NewConfiguration() Configuration {
 	return make(Configuration)
 }
 
-func NewConfigurationFromMap(m map[string]interface{}) Configuration {
+func NewConfigurationFromMap(m map[string]interface{}, root ...string) Configuration {
 	c := NewConfiguration()
-	c.Parse(m)
+	c.Parse(m, root...)
 	return c
 }
 
@@ -86,13 +87,22 @@ func NewConfigurationFromFile(file string) (Configuration, error) {
 	var (
 		c   interface{}
 		cfg Configuration
-		err error
+		root, err = os.Getwd()
 	)
-
-	c, err = decodeJSONFile(file)
 
 	if err != nil {
 		return nil, err
+	}
+
+	c, err = decodeJSONFile(file, root)
+
+	if err != nil {
+		return nil, err
+	}
+
+	root = filepath.Dir(file)
+	if !filepath.IsAbs(root) {
+		root, err = filepath.Abs(root)
 	}
 
 	if err == nil {
@@ -105,13 +115,13 @@ func NewConfigurationFromFile(file string) (Configuration, error) {
 			for i := range conf {
 				m, ok := conf[i].(map[string]interface{})
 				if ok {
-					cfg.Update(NewConfigurationFromMap(m))
+					cfg.Update(NewConfigurationFromMap(m, root))
 				} else {
 					return nil, ErrConfigFileInvalid
 				}
 			}
 		case map[string]interface{}:
-			cfg = NewConfigurationFromMap(conf)
+			cfg = NewConfigurationFromMap(conf, root)
 		default:
 			return nil, ErrConfigFileInvalid
 		}
@@ -123,8 +133,8 @@ func NewConfigurationFromFile(file string) (Configuration, error) {
 	return cfg, nil
 }
 
-func (c Configuration) Parse(m map[string]interface{}) {
-	c.parseInclude(m)
+func (c Configuration) Parse(m map[string]interface{}, root ...string) {
+	c.parseInclude(m, root...)
 	c.parseSwitch(nil)
 }
 
@@ -998,42 +1008,57 @@ func (c Configuration) LoadConfigStruct(st interface{}) interface{} {
 	return val.Interface()
 }
 
-func (c Configuration) parseInclude(m map[string]interface{}) {
+func (c Configuration) parseInclude(m map[string]interface{}, root ...string) {
 	for k, v := range m {
 		if mval, ok := v.(map[string]interface{}); ok && k != "__switch__" {
 			cfg := NewConfiguration()
-			cfg.parseInclude(mval)
+			cfg.parseInclude(mval, root...)
 			c.Set(k, cfg)
 		} else if k != "__include__" {
 			c.Set(k, v)
 		}
 	}
 
+	var rootpath string
+	if len(root) > 0 {
+		rootpath = root[0]
+		if !filepath.IsAbs(rootpath) {
+			if r, err := filepath.Abs(rootpath); err == nil {
+				rootpath = r
+			}
+		}
+	} else {
+		rootpath, _ = os.Getwd()
+	}
+
 	if inc, ok := m["__include__"]; ok {
 		switch v := inc.(type) {
 		case string:
-			js, err := decodeJSONFile(v)
+			js, err := decodeJSONFile(v, rootpath)
 			if err != nil {
 				break
 			}
-			c.Update(parseJSONToConfiguration(js))
+			c.Update(parseJSONToConfiguration(js,
+				filepath.Dir(filepath.Join(rootpath, v))))
 		case []interface{}:
 			for i := range v {
 				if fname, ok := v[i].(string); ok {
-					js, err := decodeJSONFile(fname)
+					js, err := decodeJSONFile(fname, rootpath)
 					if err != nil {
 						continue
 					}
-					c.Update(parseJSONToConfiguration(js))
+					c.Update(parseJSONToConfiguration(js,
+						filepath.Dir(filepath.Join(rootpath, fname))))
 				}
 			}
 		case []string:
 			for i := range v {
-				js, err := decodeJSONFile(v[i])
+				js, err := decodeJSONFile(v[i], rootpath)
 				if err != nil {
 					continue
 				}
-				c.Update(parseJSONToConfiguration(js))
+				c.Update(parseJSONToConfiguration(js,
+					filepath.Dir(filepath.Join(rootpath, v[i]))))
 			}
 		}
 	}
@@ -1098,7 +1123,11 @@ func (c Configuration) splitBranchKey(key string) (Configuration, string) {
 	return cfg, key
 }
 
-func decodeJSONFile(fname string) (interface{}, error) {
+func decodeJSONFile(fname string, root string) (interface{}, error) {
+	if !filepath.IsAbs(fname) {
+		fname = filepath.Join(root, fname)
+	}
+
 	var c interface{}
 	fp, err := os.Open(fname)
 
@@ -1114,7 +1143,7 @@ func decodeJSONFile(fname string) (interface{}, error) {
 	return c, nil
 }
 
-func parseJSONToConfiguration(js interface{}) (cfg Configuration) {
+func parseJSONToConfiguration(js interface{}, root ...string) (cfg Configuration) {
 	switch conf := js.(type) {
 	case []interface{}:
 		cfg = NewConfiguration()
@@ -1122,13 +1151,13 @@ func parseJSONToConfiguration(js interface{}) (cfg Configuration) {
 		for i := range conf {
 			if m, ok := conf[i].(map[string]interface{}); ok {
 				cc := NewConfiguration()
-				cc.parseInclude(m)
+				cc.parseInclude(m, root...)
 				cfg.Update(cc)
 			}
 		}
 	case map[string]interface{}:
 		cfg = NewConfiguration()
-		cfg.parseInclude(conf)
+		cfg.parseInclude(conf, root...)
 	}
 
 	return
