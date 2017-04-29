@@ -130,7 +130,7 @@ func NewSQLID() SQLID {
 	b[10] = osPID[1]
 
 	binary.BigEndian.PutUint32(b[11:], atomic.AddUint32(&counter, 1))
-	return SQLID(base32.StdEncoding.EncodeToString(b[:]))
+	return SQLID(base32.HexEncoding.EncodeToString(b[:]))
 }
 
 func NewSQLNullID() SQLNullID {
