@@ -17,19 +17,33 @@ type GzipResponseWriter struct {
 }
 
 func (gw *GzipResponseWriter) Write(data []byte) (int, error) {
-	gw.size += int64(len(data))
 	if gw.gzip != nil {
-		defer gw.gzip.Flush()
-		return gw.gzip.Write(data)
+		var (
+			i   int
+			err error
+		)
+
+		if i, err = gw.gzip.Write(data); err == nil {
+			if err = gw.gzip.Flush(); err == nil {
+				gw.size += int64(i)
+			} else {
+				i = 0
+			}
+		}
+
+		return i, err
 	}
+
 	return gw.ResponseWriter.Write(data)
 }
 
 // GzipResponseWriter must be manually closed!
-func (gw *GzipResponseWriter) Close() {
+func (gw *GzipResponseWriter) Close() error {
 	if gw.gzip != nil {
-		gw.gzip.Close()
+		return gw.gzip.Close()
 	}
+
+	return nil
 }
 
 func (gw *GzipResponseWriter) RawSize() int64 {
