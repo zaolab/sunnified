@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"io"
 	"log"
-	"net/http"
 
 	"github.com/zaolab/sunnified/mvc"
 	"github.com/zaolab/sunnified/web"
@@ -130,9 +129,9 @@ func (mv *MultiView) Publish(ctxt *web.Context) (err error) {
 				gzipwriter.Close()
 			}
 
-			if flushw, ok := ctxt.Response.(http.Flusher); ok {
-				flushw.Flush()
-			}
+			//if flushw, ok := ctxt.RootResponse().(http.Flusher); ok {
+			//	flushw.Flush()
+			//}
 		} else {
 			ctxt.Response.WriteHeader(200)
 		}

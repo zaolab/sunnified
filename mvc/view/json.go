@@ -2,11 +2,20 @@ package view
 
 import (
 	"bytes"
+	"compress/gzip"
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/zaolab/sunnified/mvc"
 	"github.com/zaolab/sunnified/web"
+)
+
+var (
+	emptyJSON    = []byte{'{', '}'}
+	emptyJSONLen = strconv.Itoa(len(emptyJSON))
 )
 
 type JSONView mvc.VM
@@ -39,16 +48,75 @@ func (jv JSONView) RenderString(ctxt *web.Context) (string, error) {
 func (jv JSONView) Publish(ctxt *web.Context) error {
 	ctxt.SetHeader("Content-Type", "application/json; charset=utf-8")
 
-	if jv == nil || len(jv) == 0 {
-		ctxt.Response.Write([]byte{'{', '}'})
+	var meth = ctxt.Method()
+
+	if meth == "HEAD" {
+		if jv == nil || len(jv) == 0 {
+			ctxt.SetHeader("Content-Length", emptyJSONLen)
+		}
+
+		ctxt.Response.WriteHeader(200)
 		return nil
 	}
 
-	jsone := json.NewEncoder(ctxt.Response)
-	if err := jsone.Encode(jv.getEncodingInterface()); err != nil {
+	if jv == nil || len(jv) == 0 {
+		ctxt.SetHeader("Content-Length", emptyJSONLen)
+		ctxt.Response.Write(emptyJSON)
+		return nil
+	}
+
+	var (
+		bb, err = json.Marshal(jv.getEncodingInterface())
+		etag    string
+	)
+
+	if err != nil {
 		return err
 	}
-	return nil
+
+	if meth == "GET" && ctxt.ResHeader("Cache-Control") == "" && ctxt.ResHeader("ETag") == "" {
+		ctxt.SetHeader("Cache-Control", "max-age=0, must-revalidate")
+		etag = fmt.Sprintf("%x", md5.Sum(bb))
+	}
+
+	if msize := GetMinGZIPSize(); msize <= 0 || len(bb) < msize {
+		goto skipgzip
+	}
+
+	ctxt.AddHeaderVary("Accept-Encoding")
+
+	if ctxt.ReqHeaderHas("Accept-Encoding", "gzip") {
+		if etag != "" {
+			if ctxt.IfNoneMatch(`W/"`+etag+`.gzip"`) == 304 {
+				ctxt.Response.WriteHeader(304)
+				return nil
+			}
+		}
+
+		gw, err := gzip.NewWriterLevel(ctxt.Response, gzip.BestSpeed)
+		if err != nil {
+			goto skipgzip
+		}
+
+		ctxt.SetHeader("Content-Encoding", "gzip")
+
+		if _, err = gw.Write(bb); err != nil {
+			return err
+		}
+
+		return gw.Close()
+	}
+
+skipgzip:
+	if etag != "" && ctxt.IfNoneMatch(`"`+etag+`"`) == 304 {
+		ctxt.Response.WriteHeader(304)
+		return nil
+	}
+
+	ctxt.SetHeader("Content-Length", strconv.Itoa(len(bb)))
+
+	_, err = ctxt.Response.Write(bb)
+	return err
 }
 
 func (jv JSONView) getEncodingInterface() (i interface{}) {

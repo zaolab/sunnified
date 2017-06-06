@@ -235,11 +235,32 @@ func (c *Context) ReqHeader(header string) string {
 }
 
 func (c *Context) ReqHeaderHas(header, value string) bool {
-	return strings.Contains(c.Request.Header.Get(header), value)
+	for _, h := range c.Request.Header[header] {
+		if strings.Contains(h, value) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *Context) ReqHeaderIs(header, value string) bool {
-	return c.Request.Header.Get(header) == value
+	if h := c.Request.Header.Get(header); strings.Index(h, ",") != -1 {
+		hh := strings.Split(h, ",")
+		for _, h := range hh {
+			if strings.TrimSpace(h) == value {
+				return true
+			}
+		}
+	} else {
+		for _, h := range c.Request.Header[header] {
+			if h == value {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (c *Context) ResHeader(header string) string {
@@ -252,6 +273,27 @@ func (c *Context) SetHeader(header, value string) {
 
 func (c *Context) AddHeader(header, value string) {
 	c.Response.Header().Add(header, value)
+}
+
+func (c *Context) AddHeaderVary(v string) {
+	h := c.Response.Header()
+	if vary, exists := h["Vary"]; !exists || !validate.IsIn(v, vary...) {
+		h.Add("Vary", v)
+	}
+}
+
+func (c *Context) IfNoneMatch(etag string) int {
+	if etag == "" {
+		etag = c.Response.Header().Get("ETag")
+	} else {
+		etag = c.SetETag(etag)
+	}
+
+	if c.ReqHeaderIs("If-None-Match", etag) {
+		return 304
+	}
+
+	return 200
 }
 
 func (c *Context) StartTime() time.Time {
@@ -421,8 +463,22 @@ func (c *Context) XMethod() string {
 	return xmeth
 }
 
-func (c *Context) SetETag(etag string) {
+func (c *Context) SetETag(etag string) string {
+	if etag == "" {
+		c.Response.Header().Del("ETag")
+		return ""
+	} else if len(etag) > 2 {
+		if etag[0] != '"' && etag[:2] != "W/" {
+			etag = `"` + etag + `"`
+		} else if etag[:2] == "W/" && etag[2] != '"' {
+			etag = `W/"` + etag[2:] + `"`
+		}
+	} else {
+		etag = `"` + etag + `"`
+	}
+
 	c.Response.Header().Set("ETag", etag)
+	return etag
 }
 
 func (c *Context) SetCookie(ck *http.Cookie) {
@@ -539,6 +595,10 @@ func (c *Context) PrivateNoCache() {
 }
 
 func (c *Context) PublicCache(age int) {
+	if c.Method() != "GET" {
+		return
+	}
+
 	header := c.Response.Header()
 
 	if pragma, exists := header["Pragma"]; exists {

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"mime"
-	"net/http"
 	"strings"
 
 	//"github.com/bradfitz/gomemcache/memcache"
@@ -202,9 +201,9 @@ func (rv *ResultView) Publish(ctxt *web.Context) (err error) {
 
 			//mc.Set(&memcache.Item{Key: ctxt.Request.RequestURI, Value: b.Bytes(), Expiration: 3600})
 
-			if flushw, ok := ctxt.RootResponse().(http.Flusher); ok {
-				flushw.Flush()
-			}
+			//if flushw, ok := ctxt.RootResponse().(http.Flusher); ok {
+			//	flushw.Flush()
+			//}
 		} else {
 			ctxt.Response.WriteHeader(200)
 		}
