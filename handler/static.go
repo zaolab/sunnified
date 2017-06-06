@@ -138,7 +138,7 @@ func (sh *StaticFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	md5ed := md5.Sum([]byte(fmt.Sprintf("%d%s%d", clen, fullpath, modtime.Unix())))
-	etag := fmt.Sprintf("%x%s", md5ed, etaggz)
+	etag := fmt.Sprintf(`"%x%s"`, md5ed, etaggz)
 	header.Set("ETag", etag)
 
 	file, err = os.Open(fullpath)
