@@ -235,6 +235,9 @@ func (m *Mail) SetSubject(subj string) {
 	s := mail.Address{Name: subj, Address: "a@abc.com"}
 	subj = s.String()
 	m.subject = strings.TrimSpace(strings.TrimSuffix(subj, "<a@abc.com>"))
+	if lsub := len(m.subject); lsub > 0 && m.subject[0] == '"' && m.subject[lsub-1] == '"' {
+		m.subject = strings.Replace(m.subject[1:lsub-1], `\"`, `"`, -1)
+	}
 }
 
 func (m *Mail) Subject() string {
