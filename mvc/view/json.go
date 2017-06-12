@@ -48,7 +48,14 @@ func (jv JSONView) RenderString(ctxt *web.Context) (string, error) {
 func (jv JSONView) Publish(ctxt *web.Context) error {
 	ctxt.SetHeader("Content-Type", "application/json; charset=utf-8")
 
-	var meth = ctxt.Method()
+	var (
+		meth    = ctxt.Method()
+		genETag = meth == "GET" && ctxt.ResHeader("Cache-Control") == "" && ctxt.ResHeader("ETag") == ""
+	)
+
+	if genETag {
+		ctxt.SetHeader("Cache-Control", "max-age=0, must-revalidate")
+	}
 
 	if meth == "HEAD" {
 		if jv == nil || len(jv) == 0 {
@@ -74,8 +81,7 @@ func (jv JSONView) Publish(ctxt *web.Context) error {
 		return err
 	}
 
-	if meth == "GET" && ctxt.ResHeader("Cache-Control") == "" && ctxt.ResHeader("ETag") == "" {
-		ctxt.SetHeader("Cache-Control", "max-age=0, must-revalidate")
+	if genETag {
 		etag = fmt.Sprintf("%x", md5.Sum(bb))
 	}
 
