@@ -35,6 +35,11 @@ var sessHash = sha256.New
 // use a higher entropy (bytes) to prevent brute force session attack
 var sessEnthropy = 24
 
+// characters for password generation
+var pwdchars = [40]byte{'A', 'C', 'E', 'F', 'H', 'J', 'M', 'N', 'P', 'R', 'T', 'Y',
+	'a', 'b', 'c', 'd', 'e', 'f', 'h', 'm', 'n', 'p', 'q', 'r', 'y',
+	'3', '4', '7', '@', '#', '%', '&', '-', '_', '=', '?', '*', '/', '^', '+'}
+
 type CSRFGate struct {
 	config CSRFGateConfig
 }
@@ -334,4 +339,26 @@ func GenSessionID(l ...int) string {
 
 func GenSessionIDBase32(l ...int) string {
 	return base32.StdEncoding.EncodeToString(genSessionID(l...))
+}
+
+func GenPassword(l int) string {
+	if l < 1 {
+		return ""
+	}
+
+	var (
+		b          = GenRandomBytes(l)
+		pwd        = make([]byte, l)
+		csetl      = len(pwdchars)
+		max   byte = byte(256 - (256 % csetl) - 1)
+	)
+
+	for i := 0; i < 10; i++ {
+		for b[i] > max {
+			b[i] = GenRandomBytes(1)[0]
+		}
+		pwd[i] = pwdchars[b[i]%csetl]
+	}
+
+	return string(pwd)
 }
