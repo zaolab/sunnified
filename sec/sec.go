@@ -349,8 +349,8 @@ func GenPassword(l int) string {
 	var (
 		b          = GenRandomBytes(l)
 		pwd        = make([]byte, l)
-		csetl      = len(pwdchars)
-		max   byte = byte(256 - (256 % csetl) - 1)
+		csetl      = byte(len(pwdchars))
+		max   byte = byte(256 - (256 % int(csetl)) - 1)
 	)
 
 	for i := 0; i < 10; i++ {
