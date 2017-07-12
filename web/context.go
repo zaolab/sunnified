@@ -305,9 +305,8 @@ func (c *Context) SunnyServerID() int {
 	// using NewContext
 	if c.issunny {
 		return c.sunnyserver
-	} else {
-		return -1
 	}
+	return -1
 }
 
 func (c *Context) IsSunnyContext() bool {
@@ -856,10 +855,8 @@ func makeRequestData(k string, c map[string]interface{}, f url.Values) {
 				case bool:
 					f.Add(key, strconv.FormatBool(s))
 				case map[string]interface{}:
-					if key != "" {
-						key = fmt.Sprintf("%s.%d", key, i)
-					}
-					makeRequestData(key, s, f)
+					ikey := fmt.Sprintf("%s.%d", key, i)
+					makeRequestData(ikey, s, f)
 				}
 			}
 		case string:
