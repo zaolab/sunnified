@@ -241,6 +241,10 @@ func (c *ControlManager) Prepare() error {
 			}
 		}
 
+		if c.context.HasErrorCode() {
+			c.state = c.context.ErrorCode()
+		}
+
 		c.prepared = true
 	}
 
